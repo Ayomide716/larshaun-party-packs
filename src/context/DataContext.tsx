@@ -1,0 +1,278 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { Product, Customer, Sale, Expense } from "@/data/mockData";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+
+interface DataContextType {
+    products: Product[];
+    customers: Customer[];
+    sales: Sale[];
+    expenses: Expense[];
+    isLoading: boolean;
+    refreshData: () => Promise<void>;
+
+    // Global mutators
+    addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+    updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+    deleteProduct: (id: string) => Promise<void>;
+
+    addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+    updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+
+    addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
+    addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+
+    updateProductStock: (productId: string, deductedQty: number) => Promise<void>;
+    updateCustomerStats: (customerId: string, amountSpent: number, date: string) => Promise<void>;
+}
+
+const DataContext = createContext<DataContextType | null>(null);
+
+export function DataProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useAuth();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const refreshData = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            // Fetch Products
+            const { data: productsData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+            if (productsData) setProducts(productsData.map(p => ({
+                ...p,
+                minStock: p.min_stock,
+                imageEmoji: p.image_emoji
+            })));
+
+            // Fetch Customers
+            const { data: customersData } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+            if (customersData) setCustomers(customersData.map(c => ({
+                ...c,
+                joinDate: c.join_date,
+                totalPurchases: c.total_purchases,
+                totalSpent: c.total_spent,
+                lastPurchase: c.last_purchase
+            })));
+
+            // Fetch Expenses
+            const { data: expensesData } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+            if (expensesData) setExpenses(expensesData);
+
+            // Fetch Sales with items
+            const { data: salesData } = await supabase
+                .from('sales')
+                .select('*, sale_items(*)')
+                .order('date', { ascending: false });
+
+            if (salesData) {
+                setSales(salesData.map(s => ({
+                    ...s,
+                    customerId: s.customer_id,
+                    customerName: s.customer_name,
+                    paymentMethod: s.payment_method,
+                    products: s.sale_items.map((si: any) => ({
+                        productId: si.product_id,
+                        productName: si.product_name,
+                        qty: si.qty,
+                        price: si.price
+                    }))
+                })));
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            toast.error("Failed to sync with database");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            refreshData();
+        } else {
+            setProducts([]);
+            setCustomers([]);
+            setSales([]);
+            setExpenses([]);
+            setIsLoading(false);
+        }
+    }, [user]);
+
+    const addProduct = async (product: Omit<Product, 'id'>) => {
+        const { data, error } = await supabase.from('products').insert({
+            user_id: user?.id,
+            name: product.name,
+            category: product.category,
+            sku: product.sku,
+            price: product.price,
+            cost: product.cost,
+            stock: product.stock,
+            min_stock: product.minStock,
+            description: product.description,
+            image_emoji: product.imageEmoji
+        }).select().single();
+
+        if (error) throw error;
+        if (data) setProducts(prev => [{
+            ...data,
+            minStock: data.min_stock,
+            imageEmoji: data.image_emoji
+        }, ...prev]);
+    };
+
+    const updateProduct = async (id: string, product: Partial<Product>) => {
+        const updates: any = { ...product };
+        if (product.minStock !== undefined) updates.min_stock = product.minStock;
+        if (product.imageEmoji !== undefined) updates.image_emoji = product.imageEmoji;
+        delete updates.minStock;
+        delete updates.imageEmoji;
+        delete updates.id;
+
+        const { error } = await supabase.from('products').update(updates).eq('id', id);
+        if (error) throw error;
+        setProducts(prev => prev.map(p => p.id === id ? { ...p, ...product } : p));
+    };
+
+    const deleteProduct = async (id: string) => {
+        const { error } = await supabase.from('products').delete().eq('id', id);
+        if (error) throw error;
+        setProducts(prev => prev.filter(p => p.id !== id));
+    };
+
+    const addCustomer = async (customer: Omit<Customer, 'id'>) => {
+        const { data, error } = await supabase.from('customers').insert({
+            user_id: user?.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            address: customer.address,
+            join_date: customer.joinDate,
+            total_purchases: customer.totalPurchases,
+            total_spent: customer.totalSpent,
+            last_purchase: customer.lastPurchase,
+            segment: customer.segment,
+            notes: customer.notes
+        }).select().single();
+
+        if (error) throw error;
+        if (data) setCustomers(prev => [{
+            ...data,
+            joinDate: data.join_date,
+            totalPurchases: data.total_purchases,
+            totalSpent: data.total_spent,
+            lastPurchase: data.last_purchase
+        }, ...prev]);
+    };
+
+    const updateCustomer = async (id: string, customer: Partial<Customer>) => {
+        const updates: any = { ...customer };
+        if (customer.joinDate) updates.join_date = customer.joinDate;
+        if (customer.totalPurchases !== undefined) updates.total_purchases = customer.totalPurchases;
+        if (customer.totalSpent !== undefined) updates.total_spent = customer.totalSpent;
+        if (customer.lastPurchase) updates.last_purchase = customer.lastPurchase;
+
+        delete updates.joinDate;
+        delete updates.totalPurchases;
+        delete updates.totalSpent;
+        delete updates.lastPurchase;
+        delete updates.id;
+
+        const { error } = await supabase.from('customers').update(updates).eq('id', id);
+        if (error) throw error;
+        setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...customer } : c));
+    };
+
+    const addSale = async (sale: Omit<Sale, 'id'>) => {
+        // 1. Insert sale
+        const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+            user_id: user?.id,
+            date: sale.date,
+            customer_id: sale.customerId,
+            customer_name: sale.customerName,
+            total: sale.total,
+            status: sale.status,
+            payment_method: sale.paymentMethod
+        }).select().single();
+
+        if (saleError) throw saleError;
+
+        // 2. Insert sale items
+        const saleItems = sale.products.map(p => ({
+            sale_id: saleData.id,
+            product_id: p.productId,
+            product_name: p.productName,
+            qty: p.qty,
+            price: p.price
+        }));
+
+        const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
+        if (itemsError) throw itemsError;
+
+        setSales(prev => [{ ...sale, id: saleData.id }, ...prev]);
+    };
+
+    const addExpense = async (expense: Omit<Expense, 'id'>) => {
+        const { data, error } = await supabase.from('expenses').insert({
+            user_id: user?.id,
+            ...expense
+        }).select().single();
+
+        if (error) throw error;
+        if (data) setExpenses(prev => [data, ...prev]);
+    };
+
+    const updateProductStock = async (productId: string, deductedQty: number) => {
+        const product = products.find(p => p.id === productId);
+        if (!product) return;
+
+        const newStock = product.stock - deductedQty;
+        const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', productId);
+        if (error) throw error;
+
+        setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
+    };
+
+    const updateCustomerStats = async (customerId: string, amountSpent: number, date: string) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        const newStats = {
+            total_purchases: customer.totalPurchases + 1,
+            total_spent: customer.totalSpent + amountSpent,
+            last_purchase: date
+        };
+
+        const { error } = await supabase.from('customers').update(newStats).eq('id', customerId);
+        if (error) throw error;
+
+        setCustomers(prev => prev.map(c => c.id === customerId ? {
+            ...c,
+            totalPurchases: newStats.total_purchases,
+            totalSpent: newStats.total_spent,
+            lastPurchase: date
+        } : c));
+    };
+
+    return (
+        <DataContext.Provider value={{
+            products, customers, sales, expenses, isLoading, refreshData,
+            addProduct, updateProduct, deleteProduct,
+            addCustomer, updateCustomer,
+            addSale, addExpense,
+            updateProductStock, updateCustomerStats
+        }}>
+            {children}
+        </DataContext.Provider>
+    );
+}
+
+export function useData() {
+    const ctx = useContext(DataContext);
+    if (!ctx) throw new Error("useData must be used within DataProvider");
+    return ctx;
+}

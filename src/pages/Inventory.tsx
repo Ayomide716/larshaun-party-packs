@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { products as initialProducts, Product } from "@/data/mockData";
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Product } from "@/data/mockData";
+import { useData } from "@/context/DataContext";
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -18,7 +20,7 @@ const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers"
 const emptyProduct: Omit<Product, 'id'> = { name: '', category: 'Scented Candles', sku: '', price: 0, cost: 0, stock: 0, minStock: 10, description: '', imageEmoji: '🕯️' };
 
 export default function Inventory() {
-  const [products, setProducts] = useState(initialProducts);
+  const { products, addProduct, updateProduct, deleteProduct, isLoading } = useData();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -51,16 +53,29 @@ export default function Inventory() {
   const openAdd = () => { setEditing(null); setForm(emptyProduct); setDialogOpen(true); };
   const openEdit = (p: Product) => { setEditing(p); setForm({ name: p.name, category: p.category, sku: p.sku, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, description: p.description, imageEmoji: p.imageEmoji }); setDialogOpen(true); };
 
-  const save = () => {
-    if (editing) {
-      setProducts(ps => ps.map(p => p.id === editing.id ? { ...p, ...form, imageEmoji: emojis[form.category] || '📦' } : p));
-    } else {
-      setProducts(ps => [{ ...form, id: `p${Date.now()}`, imageEmoji: emojis[form.category] || '📦' }, ...ps]);
+  const save = async () => {
+    try {
+      if (editing) {
+        await updateProduct(editing.id, { ...form, imageEmoji: emojis[form.category] || '📦' });
+        toast.success("Product updated successfully");
+      } else {
+        await addProduct({ ...form, imageEmoji: emojis[form.category] || '📦' });
+        toast.success("Product added successfully");
+      }
+      setDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to save product");
     }
-    setDialogOpen(false);
   };
 
-  const remove = (id: string) => setProducts(ps => ps.filter(p => p.id !== id));
+  const remove = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      toast.success("Product deleted");
+    } catch (error) {
+      toast.error("Failed to delete product");
+    }
+  };
 
   const handleExportCSV = () => {
     exportToCSV(products, `inventory_export_${new Date().toISOString().split('T')[0]}`);
@@ -79,26 +94,40 @@ export default function Inventory() {
     exportToPDF(headers, data, 'Inventory List', `inventory_${new Date().toISOString().split('T')[0]}`);
   };
 
-  const handleImportCSV = (importedData: any[]) => {
-    const validProducts = importedData
-      .filter(p => p.name && p.sku)
-      .map(p => ({
-        id: `p${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: p.name,
-        category: p.category || 'Other',
-        sku: p.sku,
-        price: parseFloat(p.price) || 0,
-        cost: parseFloat(p.cost) || 0,
-        stock: parseInt(p.stock) || 0,
-        minStock: parseInt(p.minStock) || 10,
-        description: p.description || '',
-        imageEmoji: emojis[p.category] || '📦'
-      }));
-    setProducts(prev => [...prev, ...validProducts]);
+  const handleImportCSV = async (importedData: any[]) => {
+    try {
+      for (const p of importedData) {
+        if (p.name && p.sku) {
+          await addProduct({
+            name: p.name,
+            category: p.category || 'Other',
+            sku: p.sku,
+            price: parseFloat(p.price) || 0,
+            cost: parseFloat(p.cost) || 0,
+            stock: parseInt(p.stock) || 0,
+            minStock: parseInt(p.minStock) || 10,
+            description: p.description || '',
+            imageEmoji: emojis[p.category] || '📦'
+          });
+        }
+      }
+      toast.success("Import completed");
+    } catch (error) {
+      toast.error("Import failed partially");
+    }
   };
 
   const totalValue = products.reduce((sum, p) => sum + p.stock * p.cost, 0);
   const lowStock = products.filter(p => p.stock <= p.minStock).length;
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Syncing inventory...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

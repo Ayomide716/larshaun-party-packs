@@ -1,6 +1,6 @@
-import { sales, expenses, products, customers } from "@/data/mockData";
+import { useData } from "@/context/DataContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, Loader2 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
@@ -20,15 +20,26 @@ const categoryRevenue = [
   { name: "Kitchen Runners", revenue: 660, units: 14 },
 ];
 
-const topCustomersData = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
-
-const expenseByCategory = Object.entries(
-  expenses.reduce((acc, e) => ({ ...acc, [e.category]: (acc[e.category] || 0) + e.amount }), {} as Record<string, number>)
-).map(([name, value]) => ({ name, value }));
-
-const COLORS = ["hsl(15,55%,42%)", "hsl(145,25%,28%)", "hsl(40,75%,52%)", "hsl(20,15%,35%)", "hsl(36,25%,65%)", "hsl(200,50%,45%)"];
-
 export default function Reports() {
+  const { sales, expenses, products, customers, isLoading } = useData();
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Generating reports...</span>
+      </div>
+    );
+  }
+
+  const topCustomersData = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+
+  const expenseByCategory = Object.entries(
+    expenses.reduce((acc, e) => ({ ...acc, [e.category]: (acc[e.category] || 0) + e.amount }), {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value }));
+
+  const COLORS = ["hsl(15,55%,42%)", "hsl(145,25%,28%)", "hsl(40,75%,52%)", "hsl(20,15%,35%)", "hsl(36,25%,65%)", "hsl(200,50%,45%)"];
+
   const totalRevenue = sales.filter(s => s.status === "completed").reduce((s, sale) => s + sale.total, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const profit = totalRevenue - totalExpenses;

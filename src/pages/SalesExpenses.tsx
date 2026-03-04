@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { sales as initialSales, expenses as initialExpenses, Sale, Expense, products, customers, updateProductStock, updateCustomerStats } from "@/data/mockData";
+import { Sale, Expense } from "@/data/mockData";
+import { useData } from "@/context/DataContext";
 import { toast } from "sonner";
-import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X } from "lucide-react";
+import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,9 +17,11 @@ const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
 export default function SalesExpenses() {
-  const [sales, setSales] = useState(initialSales);
-  const [expenses, setExpenses] = useState(initialExpenses);
+  const { sales, addSale, expenses, addExpense, products, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [saleStatusFilter, setSaleStatusFilter] = useState('All');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
   const [saleDialog, setSaleDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
 
@@ -29,14 +32,25 @@ export default function SalesExpenses() {
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const profit = totalRevenue - totalExpenses;
 
-  const filteredSales = sales.filter(s => s.customerName.toLowerCase().includes(search.toLowerCase()) || s.id.includes(search));
-  const filteredExpenses = expenses.filter(e => e.description.toLowerCase().includes(search.toLowerCase()) || e.vendor.toLowerCase().includes(search.toLowerCase()));
+  const filteredSales = sales.filter(s => {
+    const matchesSearch = s.customerName.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = saleStatusFilter === 'All' || s.status === saleStatusFilter;
+    const matchesDate = (!dateRange.start || s.date >= dateRange.start) && (!dateRange.end || s.date <= dateRange.end);
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const filteredExpenses = expenses.filter(e => {
+    const matchesSearch = e.description.toLowerCase().includes(search.toLowerCase()) || e.vendor.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = expenseCategoryFilter === 'All' || e.category === expenseCategoryFilter;
+    const matchesDate = (!dateRange.start || e.date >= dateRange.start) && (!dateRange.end || e.date <= dateRange.end);
+    return matchesSearch && matchesCategory && matchesDate;
+  });
 
   const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', qty: 1 }] }));
   const removeSaleItem = (i: number) => setSaleForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
   const updateSaleItem = (i: number, field: string, value: string | number) => setSaleForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
 
-  const saveSale = () => {
+  const saveSale = async () => {
     const customer = customers.find(c => c.id === saleForm.customerId);
     if (!customer) return;
 
@@ -62,26 +76,45 @@ export default function SalesExpenses() {
 
     const total = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
 
-    // Persist to local visual state
-    setSales(prev => [{ id: `s${Date.now()}`, date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod }, ...prev]);
+    try {
+      // Persist to Supabase
+      await addSale({
+        date: saleForm.date,
+        customerId: saleForm.customerId,
+        customerName: customer.name,
+        products: saleItems,
+        total,
+        status: saleForm.status,
+        paymentMethod: saleForm.paymentMethod
+      });
 
-    // Mutate pseudo-database globally (only if status is completed)
-    if (saleForm.status === 'completed') {
-      saleItems.forEach(i => updateProductStock(i.productId, i.qty));
-      updateCustomerStats(customer.id, total, saleForm.date);
-      toast.success('Sale recorded and inventory updated.');
-    } else {
-      toast.success('Pending sale recorded.');
+      // Mutate pseudo-database globally (only if status is completed)
+      if (saleForm.status === 'completed') {
+        for (const i of saleItems) {
+          await updateProductStock(i.productId, i.qty);
+        }
+        await updateCustomerStats(customer.id, total, saleForm.date);
+        toast.success('Sale recorded and inventory updated.');
+      } else {
+        toast.success('Pending sale recorded.');
+      }
+
+      setSaleDialog(false);
+      setSaleForm({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed', items: [{ productId: '', qty: 1 }] });
+    } catch (error) {
+      toast.error("Failed to save sale");
     }
-
-    setSaleDialog(false);
-    setSaleForm({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed', items: [{ productId: '', qty: 1 }] });
   };
 
-  const saveExpense = () => {
-    setExpenses(prev => [{ id: `e${Date.now()}`, ...expenseForm }, ...prev]);
-    setExpenseDialog(false);
-    setExpenseForm({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
+  const saveExpense = async () => {
+    try {
+      await addExpense(expenseForm);
+      setExpenseDialog(false);
+      setExpenseForm({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
+      toast.success("Expense recorded");
+    } catch (error) {
+      toast.error("Failed to save expense");
+    }
   };
 
   const statusStyle = (status: string) => cn("text-xs px-2 py-0.5 rounded-full font-medium",
@@ -90,25 +123,34 @@ export default function SalesExpenses() {
         "bg-red-100 text-red-700"
   );
 
-  const handleExportSalesCSV = () => exportToCSV(sales, `sales_export_${new Date().toISOString().split('T')[0]}`);
+  const handleExportSalesCSV = () => exportToCSV(filteredSales, `sales_export_${new Date().toISOString().split('T')[0]}`);
   const handleExportSalesPDF = () => {
     exportToPDF(
       ['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'],
-      sales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `₦${s.total.toFixed(2)}`]),
+      filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `₦${s.total.toFixed(2)}`]),
       'Sales Report',
       `sales_${new Date().toISOString().split('T')[0]}`
     );
   };
 
-  const handleExportExpensesCSV = () => exportToCSV(expenses, `expenses_export_${new Date().toISOString().split('T')[0]}`);
+  const handleExportExpensesCSV = () => exportToCSV(filteredExpenses, `expenses_export_${new Date().toISOString().split('T')[0]}`);
   const handleExportExpensesPDF = () => {
     exportToPDF(
       ['Date', 'Category', 'Description', 'Vendor', 'Amount'],
-      expenses.map(e => [e.date, e.category, e.description, e.vendor, `₦${e.amount.toFixed(2)}`]),
+      filteredExpenses.map(e => [e.date, e.category, e.description, e.vendor, `₦${e.amount.toFixed(2)}`]),
       'Expenses Report',
       `expenses_${new Date().toISOString().split('T')[0]}`
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Syncing transactions...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -141,19 +183,41 @@ export default function SalesExpenses() {
 
       {/* Tabs */}
       <Tabs defaultValue="sales">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <TabsList>
-            <TabsTrigger value="sales">Sales ({sales.length})</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses ({expenses.length})</TabsTrigger>
+            <TabsTrigger value="sales">Sales ({filteredSales.length})</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses ({filteredExpenses.length})</TabsTrigger>
           </TabsList>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-56" />
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1 shadow-sm h-10">
+              <span className="text-xs text-muted-foreground font-medium">Date:</span>
+              <Input type="date" value={dateRange.start} onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="h-7 w-[130px] border-none shadow-none focus-visible:ring-0 p-0 text-sm bg-transparent" />
+              <span className="text-muted-foreground text-sm">-</span>
+              <Input type="date" value={dateRange.end} onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="h-7 w-[130px] border-none shadow-none focus-visible:ring-0 p-0 text-sm bg-transparent" />
+            </div>
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-full md:w-56 h-10" />
+            </div>
           </div>
         </div>
 
         <TabsContent value="sales" className="mt-4">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground hidden sm:block">Status:</span>
+              <Select value={saleStatusFilter} onValueChange={setSaleStatusFilter}>
+                <SelectTrigger className="w-[130px] h-9 bg-card">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Statuses</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <ExportButton label="Export Sales" onExportCSV={handleExportSalesCSV} onExportPDF={handleExportSalesPDF} />
           </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
@@ -195,7 +259,19 @@ export default function SalesExpenses() {
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground hidden sm:block">Category:</span>
+              <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
+                <SelectTrigger className="w-[140px] h-9 bg-card">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Categories</SelectItem>
+                  {expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <ExportButton label="Export Expenses" onExportCSV={handleExportExpensesCSV} onExportPDF={handleExportExpensesPDF} />
           </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">

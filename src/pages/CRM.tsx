@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { customers as initialCustomers, sales, Customer } from "@/data/mockData";
-import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X } from "lucide-react";
+import { Customer } from "@/data/mockData";
+import { useData } from "@/context/DataContext";
+import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -25,7 +27,7 @@ const emptyCustomer: Omit<Customer, 'id'> = {
 };
 
 export default function CRM() {
-  const [customers, setCustomers] = useState(initialCustomers);
+  const { customers, addCustomer, updateCustomer, sales, isLoading } = useData();
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,13 +46,19 @@ export default function CRM() {
   const openAdd = () => { setEditingCustomer(null); setForm(emptyCustomer); setDialogOpen(true); };
   const openEdit = (c: Customer) => { setEditingCustomer(c); setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, joinDate: c.joinDate, totalPurchases: c.totalPurchases, totalSpent: c.totalSpent, lastPurchase: c.lastPurchase, segment: c.segment, notes: c.notes }); setDialogOpen(true); };
 
-  const save = () => {
-    if (editingCustomer) {
-      setCustomers(cs => cs.map(c => c.id === editingCustomer.id ? { ...c, ...form } : c));
-    } else {
-      setCustomers(cs => [{ ...form, id: `c${Date.now()}` }, ...cs]);
+  const save = async () => {
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, form);
+        toast.success("Customer updated");
+      } else {
+        await addCustomer(form);
+        toast.success("Customer added");
+      }
+      setDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to save customer");
     }
-    setDialogOpen(false);
   };
 
   const handleExportCSV = () => {
@@ -70,26 +78,40 @@ export default function CRM() {
     exportToPDF(headers, data, 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
   };
 
-  const handleImportCSV = (importedData: any[]) => {
-    const validCustomers = importedData
-      .filter(c => c.name && c.email)
-      .map(c => ({
-        id: `c${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: c.name,
-        email: c.email,
-        phone: c.phone || '',
-        address: c.address || '',
-        joinDate: c.joinDate || new Date().toISOString().split('T')[0],
-        totalPurchases: parseInt(c.totalPurchases) || 0,
-        totalSpent: parseFloat(c.totalSpent) || 0,
-        lastPurchase: c.lastPurchase || '',
-        segment: c.segment || 'New',
-        notes: c.notes || ''
-      })) as Customer[];
-    setCustomers(prev => [...prev, ...validCustomers]);
+  const handleImportCSV = async (importedData: any[]) => {
+    try {
+      for (const c of importedData) {
+        if (c.name && c.email) {
+          await addCustomer({
+            name: c.name,
+            email: c.email,
+            phone: c.phone || '',
+            address: c.address || '',
+            joinDate: c.joinDate || new Date().toISOString().split('T')[0],
+            totalPurchases: parseInt(c.totalPurchases) || 0,
+            totalSpent: parseFloat(c.totalSpent) || 0,
+            lastPurchase: c.lastPurchase || '',
+            segment: (c.segment as Customer['segment']) || 'New',
+            notes: c.notes || ''
+          });
+        }
+      }
+      toast.success("Import completed");
+    } catch (error) {
+      toast.error("Import failed partially");
+    }
   };
 
   const segmentCounts = { VIP: customers.filter(c => c.segment === 'VIP').length, Regular: customers.filter(c => c.segment === 'Regular').length, New: customers.filter(c => c.segment === 'New').length, "At Risk": customers.filter(c => c.segment === 'At Risk').length };
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Syncing customers...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

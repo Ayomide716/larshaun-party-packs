@@ -1,6 +1,6 @@
-import { BarChart3, DollarSign, Package, ShoppingCart, TrendingUp, Users, AlertTriangle, Star } from "lucide-react";
+import { BarChart3, DollarSign, Package, ShoppingCart, TrendingUp, Users, AlertTriangle, Star, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { sales, expenses, products, customers } from "@/data/mockData";
+import { useData } from "@/context/DataContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 
 const monthlyData = [
@@ -20,6 +20,16 @@ const categoryData = [
 ];
 
 export default function Dashboard() {
+  const { sales, expenses, products, customers, isLoading } = useData();
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Loading your dashboard...</span>
+      </div>
+    );
+  }
   const totalRevenue = sales.filter(s => s.status === "completed").reduce((sum, s) => sum + s.total, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalProfit = totalRevenue - totalExpenses;
