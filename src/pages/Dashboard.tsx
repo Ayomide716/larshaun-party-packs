@@ -32,7 +32,7 @@ export default function Dashboard() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-display font-semibold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back. Here's what's happening with Arōma today.</p>
+        <p className="text-muted-foreground mt-1">Welcome back. Here's what's happening today.</p>
       </div>
 
       {/* KPI Cards */}
