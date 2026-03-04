@@ -7,7 +7,7 @@ export const exportToCSV = (data: any[], filename: string) => {
   const csv = Papa.unparse(data);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  
+
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -26,7 +26,7 @@ export const exportToPDF = (
   filename: string
 ) => {
   const doc = new jsPDF();
-  
+
   doc.setFontSize(20);
   doc.text(title, 14, 22);
   doc.setFontSize(11);
@@ -57,27 +57,25 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   doc.setFontSize(24);
   doc.setTextColor(30, 41, 59); // Slate 800
   doc.text('INVOICE', 14, 25);
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139); // Slate 500
-  
+
   // Business Details (Placeholder or Real)
   let yPos = 20;
-  doc.text(businessDetails?.name || 'Sales Compass Inc.', 140, yPos);
-  doc.text(businessDetails?.address || '123 Business Rd, Suite 100', 140, yPos + 5);
-  doc.text(businessDetails?.city || 'Portland, OR 97201', 140, yPos + 10);
-  doc.text(businessDetails?.email || 'billing@salescompass.com', 140, yPos + 15);
+  doc.text(businessDetails?.name || 'Posh Homewares', 140, yPos);
+  doc.text(businessDetails?.address || 'Lagos, Nigeria', 140, yPos + 5);
+  doc.text(businessDetails?.city || 'HQ Office', 140, yPos + 10);
+  doc.text(businessDetails?.email || 'hello@poshhomewares.com', 140, yPos + 15);
 
   // Invoice Details
   yPos = 45;
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(12);
   doc.text('Bill To:', 14, yPos);
-  
+
   doc.setFontSize(10);
   doc.text(sale.customerName, 14, yPos + 7);
-  // Optional customer details if available
-  // doc.text(customerAddress, 14, yPos + 12);
 
   doc.text(`Invoice Number: INV-${sale.id.toUpperCase()}`, 140, yPos);
   doc.text(`Date: ${sale.date}`, 140, yPos + 5);
@@ -88,8 +86,8 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   const tableData = sale.products.map(p => [
     p.productName,
     p.qty.toString(),
-    `$${p.price.toFixed(2)}`,
-    `$${(p.price * p.qty).toFixed(2)}`
+    `₦${p.price.toFixed(2)}`,
+    `₦${(p.price * p.qty).toFixed(2)}`
   ]);
 
   autoTable(doc, {
@@ -107,7 +105,6 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
       cellPadding: 6,
     },
     columnStyles: {
-      0: { cellWidth: 90 },
       1: { halign: 'center' },
       2: { halign: 'right' },
       3: { halign: 'right' }
@@ -116,19 +113,19 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
 
   // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  
+
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
   doc.text('Subtotal:', 140, finalY);
   doc.text('Total:', 140, finalY + 7);
-  
+
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(10);
-  doc.text(`$${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
-  
+  doc.text(`₦${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
+
   doc.setFontSize(12);
   doc.setFont('', 'bold');
-  doc.text(`$${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
+  doc.text(`₦${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
 
   // Footer
   doc.setFont('', 'normal');

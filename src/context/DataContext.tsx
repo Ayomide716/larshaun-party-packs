@@ -92,20 +92,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        if (user) {
-            refreshData();
-        } else {
+        if (!user) {
             setProducts([]);
             setCustomers([]);
             setSales([]);
             setExpenses([]);
             setIsLoading(false);
+            return;
         }
+
+        refreshData();
+
+        // REAL-TIME SUBSCRIPTIONS
+        const channel = supabase.channel('business-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => refreshData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => refreshData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => refreshData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refreshData())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [user]);
 
     const addProduct = async (product: Omit<Product, 'id'>) => {
+        if (!user) return;
         const { data, error } = await supabase.from('products').insert({
-            user_id: user?.id,
+            user_id: user.id,
             name: product.name,
             category: product.category,
             sku: product.sku,
@@ -117,7 +131,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             image_emoji: product.imageEmoji
         }).select().single();
 
-        if (error) throw error;
+        if (error) {
+            console.error("Error adding product:", error);
+            throw error;
+        }
         if (data) setProducts(prev => [{
             ...data,
             minStock: data.min_stock,
@@ -145,21 +162,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addCustomer = async (customer: Omit<Customer, 'id'>) => {
+        if (!user) return;
         const { data, error } = await supabase.from('customers').insert({
-            user_id: user?.id,
+            user_id: user.id,
             name: customer.name,
             email: customer.email,
             phone: customer.phone,
             address: customer.address,
-            join_date: customer.joinDate,
+            join_date: customer.joinDate || null,
             total_purchases: customer.totalPurchases,
             total_spent: customer.totalSpent,
-            last_purchase: customer.lastPurchase,
+            last_purchase: customer.lastPurchase || null,
             segment: customer.segment,
             notes: customer.notes
         }).select().single();
 
-        if (error) throw error;
+        if (error) {
+            console.error("Error adding customer:", error);
+            throw error;
+        }
         if (data) setCustomers(prev => [{
             ...data,
             joinDate: data.join_date,
@@ -171,10 +192,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const updateCustomer = async (id: string, customer: Partial<Customer>) => {
         const updates: any = { ...customer };
-        if (customer.joinDate) updates.join_date = customer.joinDate;
+        if (customer.joinDate !== undefined) updates.join_date = customer.joinDate || null;
         if (customer.totalPurchases !== undefined) updates.total_purchases = customer.totalPurchases;
         if (customer.totalSpent !== undefined) updates.total_spent = customer.totalSpent;
-        if (customer.lastPurchase) updates.last_purchase = customer.lastPurchase;
+        if (customer.lastPurchase !== undefined) updates.last_purchase = customer.lastPurchase || null;
 
         delete updates.joinDate;
         delete updates.totalPurchases;
@@ -183,15 +204,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         delete updates.id;
 
         const { error } = await supabase.from('customers').update(updates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error("Error updating customer:", error);
+            throw error;
+        }
         setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...customer } : c));
     };
 
     const addSale = async (sale: Omit<Sale, 'id'>) => {
+        if (!user) return;
         // 1. Insert sale
         const { data: saleData, error: saleError } = await supabase.from('sales').insert({
-            user_id: user?.id,
-            date: sale.date,
+            user_id: user.id,
+            date: sale.date || null,
             customer_id: sale.customerId,
             customer_name: sale.customerName,
             total: sale.total,
@@ -199,7 +224,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             payment_method: sale.paymentMethod
         }).select().single();
 
-        if (saleError) throw saleError;
+        if (saleError) {
+            console.error("Error adding sale:", saleError);
+            throw saleError;
+        }
 
         // 2. Insert sale items
         const saleItems = sale.products.map(p => ({
@@ -211,18 +239,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }));
 
         const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+            console.error("Error adding sale items:", itemsError);
+            throw itemsError;
+        }
 
         setSales(prev => [{ ...sale, id: saleData.id }, ...prev]);
     };
 
     const addExpense = async (expense: Omit<Expense, 'id'>) => {
+        if (!user) return;
         const { data, error } = await supabase.from('expenses').insert({
-            user_id: user?.id,
-            ...expense
+            user_id: user.id,
+            ...expense,
+            date: expense.date || null
         }).select().single();
 
-        if (error) throw error;
+        if (error) {
+            console.error("Error adding expense:", error);
+            throw error;
+        }
         if (data) setExpenses(prev => [data, ...prev]);
     };
 
