@@ -1,6 +1,7 @@
 import { LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Settings, BookOpen } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -28,7 +29,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
+      <div className={cn("flex items-center py-5 border-b border-sidebar-border", collapsed ? "justify-center" : "gap-3 px-4")}>
         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <BookOpen className="w-4 h-4 text-primary-foreground" />
         </div>

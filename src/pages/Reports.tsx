@@ -1,6 +1,8 @@
 import { sales, expenses, products, customers } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart } from "lucide-react";
+import { ExportButton } from "@/components/ExportButton";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const monthlyRevenue = [
   { month: "Jul", revenue: 2840, expenses: 1820, profit: 1020 },
@@ -37,11 +39,33 @@ export default function Reports() {
   const atRiskCount = customers.filter(c => c.segment === "At Risk").length;
   const vipRevenue = customers.filter(c => c.segment === "VIP").reduce((s, c) => s + c.totalSpent, 0);
 
+  const handleExportCSV = () => {
+    // Exporting the monthly revenue as a generic summary representation
+    exportToCSV(monthlyRevenue, `business_report_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Metric', 'Value'];
+    const data = [
+      ['Total Revenue', `₦${totalRevenue.toFixed(2)}`],
+      ['Total Expenses', `₦${totalExpenses.toFixed(2)}`],
+      ['Net Profit', `₦${profit.toFixed(2)}`],
+      ['Profit Margin', `${margin}%`],
+      ['Average Order Value', `₦${avgOrderValue.toFixed(2)}`],
+      ['VIP Revenue', `₦${vipRevenue.toFixed(2)}`],
+      ['At-Risk Customers', atRiskCount.toString()]
+    ];
+    exportToPDF(headers, data, 'Business Overview Report', `report_${new Date().toISOString().split('T')[0]}`);
+  };
+
   return (
     <div className="p-6 space-y-8">
-      <div>
-        <h1 className="text-3xl font-display font-semibold text-foreground">Reports & Analytics</h1>
-        <p className="text-muted-foreground mt-1">Comprehensive analysis of your business performance</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-semibold text-foreground">Reports & Analytics</h1>
+          <p className="text-muted-foreground mt-1">Comprehensive analysis of your business performance</p>
+        </div>
+        <ExportButton label="Export Report" onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
       </div>
 
       {/* KPI Summary */}
@@ -49,9 +73,9 @@ export default function Reports() {
         <h2 className="text-lg font-display font-semibold mb-4">Financial Overview</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-green-700", bg: "bg-green-50" },
-            { label: "Net Profit", value: `$${profit.toFixed(2)}`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
-            { label: "Total Expenses", value: `$${totalExpenses.toFixed(2)}`, icon: TrendingDown, color: "text-red-600", bg: "bg-red-50" },
+            { label: "Total Revenue", value: `₦${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-green-700", bg: "bg-green-50" },
+            { label: "Net Profit", value: `₦${profit.toFixed(2)}`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
+            { label: "Total Expenses", value: `₦${totalExpenses.toFixed(2)}`, icon: TrendingDown, color: "text-red-600", bg: "bg-red-50" },
             { label: "Profit Margin", value: `${margin}%`, icon: ShoppingCart, color: "text-blue-700", bg: "bg-blue-50" },
           ].map(item => (
             <div key={item.label} className="bg-card border border-border rounded-2xl p-4 shadow-[var(--shadow-card)]">
@@ -82,8 +106,8 @@ export default function Reports() {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
-            <Tooltip formatter={(v: number) => [`$${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v}`} />
+            <Tooltip formatter={(v: number) => [`₦${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
             <Area type="monotone" dataKey="revenue" stroke="hsl(15,55%,42%)" fill="url(#gradRevenue)" strokeWidth={2} name="Revenue" />
             <Area type="monotone" dataKey="profit" stroke="hsl(145,25%,28%)" fill="url(#gradProfit)" strokeWidth={2} name="Profit" />
           </AreaChart>
@@ -97,9 +121,9 @@ export default function Reports() {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={categoryRevenue} layout="vertical" barSize={14}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v}`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={110} />
-              <Tooltip formatter={(v: number) => [`$${v}`, "Revenue"]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => [`₦${v}`, "Revenue"]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -113,7 +137,7 @@ export default function Reports() {
                 <Pie data={expenseByCategory} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
                   {expenseByCategory.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`$${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => [`₦${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-2 flex-1">
@@ -123,7 +147,7 @@ export default function Reports() {
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                     <span className="text-muted-foreground">{e.name}</span>
                   </div>
-                  <span className="font-medium">${e.value.toFixed(0)}</span>
+                  <span className="font-medium">₦{e.value.toFixed(0)}</span>
                 </div>
               ))}
             </div>
@@ -136,8 +160,8 @@ export default function Reports() {
         <h2 className="text-lg font-display font-semibold mb-4">Customer Insights</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           {[
-            { label: "Avg. Order Value", value: `$${avgOrderValue.toFixed(2)}`, desc: "Per completed sale" },
-            { label: "VIP Revenue", value: `$${vipRevenue.toFixed(2)}`, desc: `${customers.filter(c => c.segment === "VIP").length} VIP customers` },
+            { label: "Avg. Order Value", value: `₦${avgOrderValue.toFixed(2)}`, desc: "Per completed sale" },
+            { label: "VIP Revenue", value: `₦${vipRevenue.toFixed(2)}`, desc: `${customers.filter(c => c.segment === "VIP").length} VIP customers` },
             { label: "At-Risk Customers", value: String(atRiskCount), desc: "Require re-engagement" },
           ].map(item => (
             <div key={item.label} className="bg-card border border-border rounded-xl p-4 shadow-[var(--shadow-card)]">
@@ -160,7 +184,7 @@ export default function Reports() {
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
                     <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-sm font-semibold">${c.totalSpent.toFixed(2)}</p>
+                    <p className="text-sm font-semibold">₦{c.totalSpent.toFixed(2)}</p>
                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-primary rounded-full" style={{ width: `${(c.totalSpent / topCustomersData[0].totalSpent) * 100}%` }} />
@@ -201,10 +225,10 @@ export default function Reports() {
                           <span className="font-medium">{p.name}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 text-right">${p.price.toFixed(2)}</td>
-                      <td className="py-2.5 text-right text-muted-foreground">${p.cost.toFixed(2)}</td>
+                      <td className="py-2.5 text-right">₦{p.price.toFixed(2)}</td>
+                      <td className="py-2.5 text-right text-muted-foreground">₦{p.cost.toFixed(2)}</td>
                       <td className="py-2.5 text-right"><span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">{margin}%</span></td>
-                      <td className="py-2.5 text-right">${stockValue}</td>
+                      <td className="py-2.5 text-right">₦{stockValue}</td>
                       <td className="py-2.5 text-right">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isLow ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
                           {isLow ? "Low Stock" : "In Stock"}

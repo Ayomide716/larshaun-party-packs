@@ -105,3 +105,20 @@ export const expenses: Expense[] = [
   { id: 'e11', date: '2024-09-30', category: 'Inventory', description: 'Humidifier bulk purchase', amount: 1560.00, vendor: 'ElectroHome Wholesale' },
   { id: 'e12', date: '2024-09-15', category: 'Software', description: 'Accounting software annual', amount: 180.00, vendor: 'QuickBooks' },
 ];
+
+// Global mutators to simulate real database interactions
+export const updateProductStock = (productId: string, deductedQty: number) => {
+  const index = products.findIndex(p => p.id === productId);
+  if (index !== -1) {
+    products[index].stock -= deductedQty;
+  }
+};
+
+export const updateCustomerStats = (customerId: string, amountSpent: number, date: string) => {
+  const index = customers.findIndex(c => c.id === customerId);
+  if (index !== -1) {
+    customers[index].totalPurchases += 1;
+    customers[index].totalSpent += amountSpent;
+    customers[index].lastPurchase = date;
+  }
+};

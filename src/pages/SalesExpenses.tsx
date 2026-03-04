@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { sales as initialSales, expenses as initialExpenses, Sale, Expense, products, customers } from "@/data/mockData";
+import { sales as initialSales, expenses as initialExpenses, Sale, Expense, products, customers, updateProductStock, updateCustomerStats } from "@/data/mockData";
+import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "@/components/ExportButton";
+import { exportToCSV, exportToPDF, generateInvoicePDF } from "@/lib/exportUtils";
 
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
@@ -36,12 +39,41 @@ export default function SalesExpenses() {
   const saveSale = () => {
     const customer = customers.find(c => c.id === saleForm.customerId);
     if (!customer) return;
-    const saleItems = saleForm.items.map(item => {
+
+    // Validate stock and prepare payload
+    const saleItems = [];
+    for (const item of saleForm.items) {
+      if (!item.productId) continue;
       const product = products.find(p => p.id === item.productId);
-      return { productId: item.productId, productName: product?.name || '', qty: item.qty, price: product?.price || 0 };
-    }).filter(i => i.productId);
+      if (!product) continue;
+
+      if (product.stock < item.qty) {
+        toast.error(`Not enough stock for ${product.name}. Available: ${product.stock}`);
+        return;
+      }
+
+      saleItems.push({ productId: item.productId, productName: product.name, qty: item.qty, price: product.price });
+    }
+
+    if (saleItems.length === 0) {
+      toast.error('Add at least one valid product.');
+      return;
+    }
+
     const total = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
+
+    // Persist to local visual state
     setSales(prev => [{ id: `s${Date.now()}`, date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod }, ...prev]);
+
+    // Mutate pseudo-database globally (only if status is completed)
+    if (saleForm.status === 'completed') {
+      saleItems.forEach(i => updateProductStock(i.productId, i.qty));
+      updateCustomerStats(customer.id, total, saleForm.date);
+      toast.success('Sale recorded and inventory updated.');
+    } else {
+      toast.success('Pending sale recorded.');
+    }
+
     setSaleDialog(false);
     setSaleForm({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed', items: [{ productId: '', qty: 1 }] });
   };
@@ -54,9 +86,29 @@ export default function SalesExpenses() {
 
   const statusStyle = (status: string) => cn("text-xs px-2 py-0.5 rounded-full font-medium",
     status === 'completed' ? "bg-green-100 text-green-700" :
-    status === 'pending' ? "bg-yellow-100 text-yellow-700" :
-    "bg-red-100 text-red-700"
+      status === 'pending' ? "bg-yellow-100 text-yellow-700" :
+        "bg-red-100 text-red-700"
   );
+
+  const handleExportSalesCSV = () => exportToCSV(sales, `sales_export_${new Date().toISOString().split('T')[0]}`);
+  const handleExportSalesPDF = () => {
+    exportToPDF(
+      ['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'],
+      sales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `₦${s.total.toFixed(2)}`]),
+      'Sales Report',
+      `sales_${new Date().toISOString().split('T')[0]}`
+    );
+  };
+
+  const handleExportExpensesCSV = () => exportToCSV(expenses, `expenses_export_${new Date().toISOString().split('T')[0]}`);
+  const handleExportExpensesPDF = () => {
+    exportToPDF(
+      ['Date', 'Category', 'Description', 'Vendor', 'Amount'],
+      expenses.map(e => [e.date, e.category, e.description, e.vendor, `₦${e.amount.toFixed(2)}`]),
+      'Expenses Report',
+      `expenses_${new Date().toISOString().split('T')[0]}`
+    );
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -75,15 +127,15 @@ export default function SalesExpenses() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-green-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
-          <p className="text-2xl font-display font-semibold text-green-700">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-display font-semibold text-green-700">₦{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-red-500" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
-          <p className="text-2xl font-display font-semibold text-red-600">${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-display font-semibold text-red-600">₦{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-xs text-muted-foreground">Net Profit</span></div>
-          <p className={cn("text-2xl font-display font-semibold", profit >= 0 ? "text-primary" : "text-destructive")}>${profit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className={cn("text-2xl font-display font-semibold", profit >= 0 ? "text-primary" : "text-destructive")}>₦{profit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -101,6 +153,9 @@ export default function SalesExpenses() {
         </div>
 
         <TabsContent value="sales" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <ExportButton label="Export Sales" onExportCSV={handleExportSalesCSV} onExportPDF={handleExportSalesPDF} />
+          </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -113,6 +168,7 @@ export default function SalesExpenses() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,7 +180,12 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.paymentMethod}</td>
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
-                      <td className="px-4 py-3 text-right font-semibold">${sale.total.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold">₦{sale.total.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => generateInvoicePDF(sale)}>
+                          <Receipt className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -134,6 +195,9 @@ export default function SalesExpenses() {
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <ExportButton label="Export Expenses" onExportCSV={handleExportExpensesCSV} onExportPDF={handleExportExpensesPDF} />
+          </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -153,7 +217,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-600">₦{expense.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,7 +311,7 @@ export default function SalesExpenses() {
               <Input value={expenseForm.vendor} onChange={e => setExpenseForm(f => ({ ...f, vendor: e.target.value }))} placeholder="Vendor name" />
             </div>
             <div className="space-y-1">
-              <Label>Amount ($)</Label>
+              <Label>Amount (₦)</Label>
               <Input type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: +e.target.value }))} />
             </div>
           </div>

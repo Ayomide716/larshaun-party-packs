@@ -37,8 +37,8 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   businessName: "Arōma",
-  currency: "USD",
-  currencySymbol: "$",
+  currency: "NGN",
+  currencySymbol: "₦",
   taxRate: 8.5,
   notifications: {
     lowStock: true,

@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "@/components/ExportButton";
+import { ImportButton } from "@/components/ImportButton";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const segmentColors: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-800",
@@ -45,9 +48,45 @@ export default function CRM() {
     if (editingCustomer) {
       setCustomers(cs => cs.map(c => c.id === editingCustomer.id ? { ...c, ...form } : c));
     } else {
-      setCustomers(cs => [...cs, { ...form, id: `c${Date.now()}` }]);
+      setCustomers(cs => [{ ...form, id: `c${Date.now()}` }, ...cs]);
     }
     setDialogOpen(false);
+  };
+
+  const handleExportCSV = () => {
+    exportToCSV(customers, `customers_export_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Name', 'Email', 'Phone', 'Segment', 'Total Spent', 'Orders'];
+    const data = customers.map(c => [
+      c.name,
+      c.email,
+      c.phone,
+      c.segment,
+      `₦${c.totalSpent.toFixed(2)}`,
+      c.totalPurchases.toString()
+    ]);
+    exportToPDF(headers, data, 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleImportCSV = (importedData: any[]) => {
+    const validCustomers = importedData
+      .filter(c => c.name && c.email)
+      .map(c => ({
+        id: `c${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: c.name,
+        email: c.email,
+        phone: c.phone || '',
+        address: c.address || '',
+        joinDate: c.joinDate || new Date().toISOString().split('T')[0],
+        totalPurchases: parseInt(c.totalPurchases) || 0,
+        totalSpent: parseFloat(c.totalSpent) || 0,
+        lastPurchase: c.lastPurchase || '',
+        segment: c.segment || 'New',
+        notes: c.notes || ''
+      })) as Customer[];
+    setCustomers(prev => [...prev, ...validCustomers]);
   };
 
   const segmentCounts = { VIP: customers.filter(c => c.segment === 'VIP').length, Regular: customers.filter(c => c.segment === 'Regular').length, New: customers.filter(c => c.segment === 'New').length, "At Risk": customers.filter(c => c.segment === 'At Risk').length };
@@ -57,9 +96,16 @@ export default function CRM() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-display font-semibold text-foreground">Customer CRM</h1>
-          <p className="text-muted-foreground mt-1">{customers.length} customers · ${customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
+          <p className="text-muted-foreground mt-1">{customers.length} customers · ₦{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
         </div>
-        <Button onClick={openAdd} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
+        <div className="flex gap-2">
+          <ImportButton
+            onImport={handleImportCSV}
+            expectedHeaders={['name', 'email', 'phone']}
+          />
+          <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+          <Button onClick={openAdd} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
+        </div>
       </div>
 
       {/* Segment Summary */}
@@ -96,7 +142,7 @@ export default function CRM() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", segmentColors[c.segment])}>{c.segment}</span>
-                    <p className="text-sm font-semibold mt-1">${c.totalSpent.toFixed(2)}</p>
+                    <p className="text-sm font-semibold mt-1">₦{c.totalSpent.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">{c.totalPurchases} orders</p>
                   </div>
                 </div>
@@ -137,7 +183,7 @@ export default function CRM() {
                   <p className="text-xs text-muted-foreground">Orders</p>
                 </div>
                 <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-lg font-display font-semibold">${selected.totalSpent.toFixed(0)}</p>
+                  <p className="text-lg font-display font-semibold">₦{selected.totalSpent.toFixed(0)}</p>
                   <p className="text-xs text-muted-foreground">Lifetime</p>
                 </div>
               </div>
@@ -159,7 +205,7 @@ export default function CRM() {
                         <p className="text-muted-foreground">{s.products.length} item{s.products.length > 1 ? 's' : ''}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">${s.total.toFixed(2)}</p>
+                        <p className="font-semibold">₦{s.total.toFixed(2)}</p>
                         <span className={cn("px-1.5 py-0.5 rounded-full", s.status === 'completed' ? "bg-green-100 text-green-700" : s.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>{s.status}</span>
                       </div>
                     </div>

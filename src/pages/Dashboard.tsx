@@ -37,9 +37,9 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Revenue" value={`$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+18.2%" changeType="positive" icon={DollarSign} iconColor="bg-primary/10" />
-        <StatCard title="Net Profit" value={`$${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+12.5%" changeType="positive" icon={TrendingUp} iconColor="bg-green-100" />
-        <StatCard title="Total Expenses" value={`$${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+4.1%" changeType="negative" icon={BarChart3} iconColor="bg-orange-100" />
+        <StatCard title="Total Revenue" value={`₦${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+18.2%" changeType="positive" icon={DollarSign} iconColor="bg-primary/10" />
+        <StatCard title="Net Profit" value={`₦${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+12.5%" changeType="positive" icon={TrendingUp} iconColor="bg-green-100" />
+        <StatCard title="Total Expenses" value={`₦${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+4.1%" changeType="negative" icon={BarChart3} iconColor="bg-orange-100" />
         <StatCard title="Total Orders" value={String(sales.length)} change="+8 this month" changeType="positive" icon={ShoppingCart} iconColor="bg-blue-100" />
       </div>
 
@@ -58,8 +58,8 @@ export default function Dashboard() {
             <BarChart data={monthlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
-              <Tooltip formatter={(v: number) => [`$${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v}`} />
+              <Tooltip formatter={(v: number) => [`₦${v}`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Revenue" />
               <Bar dataKey="expenses" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Expenses" />
             </BarChart>
@@ -104,7 +104,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">{sale.date} · {sale.products.length} item{sale.products.length > 1 ? 's' : ''}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">${sale.total.toFixed(2)}</p>
+                  <p className="text-sm font-semibold">₦{sale.total.toFixed(2)}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${sale.status === 'completed' ? 'bg-green-100 text-green-700' : sale.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{sale.status}</span>
                 </div>
               </div>

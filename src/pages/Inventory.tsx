@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/SettingsContext";
+import { ExportButton } from "@/components/ExportButton";
+import { ImportButton } from "@/components/ImportButton";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const categories = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
 const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers": "💧", "Kitchen Runners": "🏡", "Ceramic Vases": "🏺", "Scented Candles": "🕯️" };
@@ -52,12 +55,47 @@ export default function Inventory() {
     if (editing) {
       setProducts(ps => ps.map(p => p.id === editing.id ? { ...p, ...form, imageEmoji: emojis[form.category] || '📦' } : p));
     } else {
-      setProducts(ps => [...ps, { ...form, id: `p${Date.now()}`, imageEmoji: emojis[form.category] || '📦' }]);
+      setProducts(ps => [{ ...form, id: `p${Date.now()}`, imageEmoji: emojis[form.category] || '📦' }, ...ps]);
     }
     setDialogOpen(false);
   };
 
   const remove = (id: string) => setProducts(ps => ps.filter(p => p.id !== id));
+
+  const handleExportCSV = () => {
+    exportToCSV(products, `inventory_export_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Name', 'SKU', 'Category', 'Price', 'Cost', 'Stock'];
+    const data = products.map(p => [
+      p.name,
+      p.sku,
+      p.category,
+      `₦${p.price.toFixed(2)}`,
+      `₦${p.cost.toFixed(2)}`,
+      p.stock.toString()
+    ]);
+    exportToPDF(headers, data, 'Inventory List', `inventory_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const handleImportCSV = (importedData: any[]) => {
+    const validProducts = importedData
+      .filter(p => p.name && p.sku)
+      .map(p => ({
+        id: `p${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: p.name,
+        category: p.category || 'Other',
+        sku: p.sku,
+        price: parseFloat(p.price) || 0,
+        cost: parseFloat(p.cost) || 0,
+        stock: parseInt(p.stock) || 0,
+        minStock: parseInt(p.minStock) || 10,
+        description: p.description || '',
+        imageEmoji: emojis[p.category] || '📦'
+      }));
+    setProducts(prev => [...prev, ...validProducts]);
+  };
 
   const totalValue = products.reduce((sum, p) => sum + p.stock * p.cost, 0);
   const lowStock = products.filter(p => p.stock <= p.minStock).length;
@@ -67,11 +105,18 @@ export default function Inventory() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-display font-semibold text-foreground">Product Inventory</h1>
-          <p className="text-muted-foreground mt-1">{products.length} products · Inventory value: ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-muted-foreground mt-1">{products.length} products · Inventory value: ₦{totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
-        <Button onClick={openAdd} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-2" />Add Product
-        </Button>
+        <div className="flex gap-2">
+          <ImportButton
+            onImport={handleImportCSV}
+            expectedHeaders={['name', 'sku', 'price', 'cost', 'stock']}
+          />
+          <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+          <Button onClick={openAdd} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-2" />Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -138,8 +183,8 @@ export default function Inventory() {
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{p.category}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">${p.price.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">${p.cost.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-medium">₦{p.price.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">₦{p.cost.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="px-2 py-1 bg-[hsl(var(--forest)_/_0.12)] text-[hsl(var(--forest))] rounded-full text-xs font-medium">{margin}%</span>
                     </td>
@@ -193,11 +238,11 @@ export default function Inventory() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Selling Price ($)</Label>
+              <Label>Selling Price (₦)</Label>
               <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Cost Price ($)</Label>
+              <Label>Cost Price (₦)</Label>
               <Input type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: +e.target.value }))} />
             </div>
             <div className="space-y-1">
