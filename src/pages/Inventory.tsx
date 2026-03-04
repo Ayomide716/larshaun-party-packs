@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { products as initialProducts, Product } from "@/data/mockData";
 import { Plus, Search, Edit2, Trash2, Package, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/context/SettingsContext";
 
 const categories = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
 const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers": "💧", "Kitchen Runners": "🏡", "Ceramic Vases": "🏺", "Scented Candles": "🕯️" };
@@ -20,6 +21,24 @@ export default function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, 'id'>>(emptyProduct);
+  const { setLowStockAlerts, settings } = useSettings();
+
+  // Sync low-stock alerts whenever products change
+  useEffect(() => {
+    if (!settings.notifications.lowStock) return;
+    const alerts = products
+      .filter(p => p.stock <= p.minStock)
+      .map(p => ({
+        productId: p.id,
+        productName: p.name,
+        sku: p.sku,
+        currentStock: p.stock,
+        minStock: p.minStock,
+        dismissed: false,
+        timestamp: Date.now(),
+      }));
+    setLowStockAlerts(alerts);
+  }, [products, settings.notifications.lowStock, setLowStockAlerts]);
 
   const filtered = products.filter(p =>
     (categoryFilter === 'All' || p.category === categoryFilter) &&
@@ -77,7 +96,7 @@ export default function Inventory() {
           <Input placeholder="Search by name or SKU…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         {lowStock > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
             <AlertTriangle className="w-4 h-4" />
             {lowStock} low stock
           </div>
@@ -122,11 +141,11 @@ export default function Inventory() {
                     <td className="px-4 py-3 text-right font-medium">${p.price.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">${p.cost.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{margin}%</span>
+                      <span className="px-2 py-1 bg-[hsl(var(--forest)_/_0.12)] text-[hsl(var(--forest))] rounded-full text-xs font-medium">{margin}%</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={cn("font-semibold", isLow ? "text-red-600" : "text-foreground")}>{p.stock}</span>
-                      {isLow && <span className="ml-1 text-xs text-red-500">⚠</span>}
+                      <span className={cn("font-semibold", isLow ? "text-destructive" : "text-foreground")}>{p.stock}</span>
+                      {isLow && <span className="ml-1 text-xs text-destructive">⚠</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">

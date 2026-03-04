@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Settings, Sparkles } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Settings, BookOpen } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -30,7 +30,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-primary-foreground" />
+          <BookOpen className="w-4 h-4 text-primary-foreground" />
         </div>
         {!collapsed && (
           <div>
