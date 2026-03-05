@@ -3,22 +3,7 @@ import { StatCard } from "@/components/StatCard";
 import { useData } from "@/context/DataContext";
 import { useSettings } from "@/context/SettingsContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-
-const monthlyData = [
-  { month: "Jul", revenue: 2840, expenses: 1820 },
-  { month: "Aug", revenue: 3120, expenses: 1950 },
-  { month: "Sep", revenue: 2690, expenses: 2280 },
-  { month: "Oct", revenue: 3890, expenses: 2100 },
-  { month: "Nov", revenue: 4280, expenses: 2380 },
-];
-
-const categoryData = [
-  { name: "Candles", value: 35, color: "hsl(15,55%,42%)" },
-  { name: "Diffusers", value: 25, color: "hsl(145,25%,28%)" },
-  { name: "Humidifiers", value: 22, color: "hsl(40,75%,52%)" },
-  { name: "Vases", value: 12, color: "hsl(20,15%,15%)" },
-  { name: "Runners", value: 6, color: "hsl(36,25%,70%)" },
-];
+import { getMonthlyStats, getCategoryStats } from "@/lib/dataUtils";
 
 export default function Dashboard() {
   const { sales, expenses, products, customers, isLoading } = useData();
@@ -38,6 +23,9 @@ export default function Dashboard() {
   const lowStockCount = products.filter(p => p.stock <= p.minStock).length;
   const vipCustomers = customers.filter(c => c.segment === "VIP").length;
   const recentSales = sales.slice(0, 5);
+  // Real aggregated data
+  const monthlyData = getMonthlyStats(sales, expenses);
+  const categoryData = getCategoryStats(sales, products);
   const topProducts = [...products].sort((a, b) => (b.price - b.cost) - (a.price - a.cost)).slice(0, 5);
 
   return (
@@ -82,22 +70,22 @@ export default function Dashboard() {
           <h3 className="font-display font-semibold text-foreground mb-4">Sales by Category</h3>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
-              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="revenue">
                 {categoryData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => [`${v}%`, ""]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => [`${settings.currencySymbol}${v.toFixed(0)}`, "Revenue"]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="space-y-2 mt-2">
-            {categoryData.map(c => (
+          <div className="space-y-1.5 mt-2">
+            {categoryData.slice(0, 5).map(c => (
               <div key={c.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
-                  <span className="text-muted-foreground">{c.name}</span>
+                  <span className="text-muted-foreground truncate max-w-[100px]">{c.name}</span>
                 </div>
-                <span className="font-medium">{c.value}%</span>
+                <span className="font-medium">{c.value.toFixed(0)}%</span>
               </div>
             ))}
           </div>

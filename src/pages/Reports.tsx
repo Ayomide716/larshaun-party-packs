@@ -5,22 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, Loader2 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
-
-const monthlyRevenue = [
-  { month: "Jul", revenue: 2840, expenses: 1820, profit: 1020 },
-  { month: "Aug", revenue: 3120, expenses: 1950, profit: 1170 },
-  { month: "Sep", revenue: 2690, expenses: 2280, profit: 410 },
-  { month: "Oct", revenue: 3890, expenses: 2100, profit: 1790 },
-  { month: "Nov", revenue: 4280, expenses: 2380, profit: 1900 },
-];
-
-const categoryRevenue = [
-  { name: "Scented Candles", revenue: 2840, units: 72 },
-  { name: "Reed Diffusers", revenue: 2120, units: 64 },
-  { name: "Humidifiers", revenue: 1890, units: 21 },
-  { name: "Ceramic Vases", revenue: 1230, units: 28 },
-  { name: "Kitchen Runners", revenue: 660, units: 14 },
-];
+import { getMonthlyStats, getCategoryStats } from "@/lib/dataUtils";
 
 export default function Reports() {
   const { sales, expenses, products, customers, isLoading } = useData();
@@ -36,6 +21,10 @@ export default function Reports() {
   }
 
   const topCustomersData = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+
+  // Real aggregated data
+  const monthlyRevenue = getMonthlyStats(sales, expenses);
+  const categoryStats = getCategoryStats(sales, products);
 
   const expenseByCategory = Object.entries(
     expenses.reduce((acc, e) => ({ ...acc, [e.category]: (acc[e.category] || 0) + e.amount }), {} as Record<string, number>)
@@ -133,11 +122,11 @@ export default function Reports() {
         <div className="bg-card border border-border rounded-2xl p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display font-semibold mb-4">Revenue by Category</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={categoryRevenue} layout="vertical" barSize={14}>
+            <BarChart data={categoryStats} layout="vertical" barSize={14}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `${settings.currencySymbol}${v}`} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={110} />
-              <Tooltip formatter={(v: number) => [`${settings.currencySymbol}${v}`, "Revenue"]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={100} />
+              <Tooltip formatter={(v: number) => [`${settings.currencySymbol}${v.toFixed(0)}`, "Revenue"]} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
