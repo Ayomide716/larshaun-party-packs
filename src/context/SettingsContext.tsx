@@ -52,12 +52,12 @@ const defaultSettings: Settings = {
   },
 };
 
-const SHARED_SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [lowStockAlerts, setLowStockAlerts] = useState<LowStockAlert[]>([]);
   const [reorderRequests, setReorderRequests] = useState<string[]>([]);
 
@@ -67,12 +67,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('business_settings')
         .select('*')
-        .eq('user_id', SHARED_SETTINGS_ID)
+        .limit(1)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 is 'no rows found'
 
       if (data) {
+        setSettingsId(data.user_id);
         setSettings({
           businessName: data.business_name,
           currency: data.currency,
@@ -112,36 +113,42 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchSettings]);
 
   const updateSettings = useCallback(async (patch: Partial<Settings>) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, ...patch };
+    if (!user) return;
 
-      // Update Supabase
-      if (user) {
-        const dbUpdate = {
-          user_id: SHARED_SETTINGS_ID,
-          business_name: newSettings.businessName,
-          currency: newSettings.currency,
-          currency_symbol: newSettings.currencySymbol,
-          tax_rate: newSettings.taxRate,
-          low_stock_notif: newSettings.notifications.lowStock,
-          low_stock_email_notif: newSettings.notifications.lowStockEmail,
-          low_stock_email_address: newSettings.notifications.lowStockEmailAddress,
-          daily_report: newSettings.notifications.dailyReport,
-          weekly_report: newSettings.notifications.weeklyReport,
-          updated_at: new Date().toISOString()
-        };
+    // Update local state immediately (Optimistic UI)
+    const newSettings = {
+      ...settings,
+      ...patch,
+      notifications: patch.notifications ? { ...settings.notifications, ...patch.notifications } : settings.notifications
+    };
+    setSettings(newSettings);
 
-        supabase.from('business_settings').upsert(dbUpdate).then(({ error }) => {
-          if (error) {
-            console.error("Error saving settings:", error);
-            toast.error("Failed to save settings to cloud");
-          }
-        });
+    // Persist to Supabase
+    try {
+      const dbUpdate = {
+        user_id: settingsId || user.id, // Use the shared record ID or current user's if first-time
+        business_name: newSettings.businessName,
+        currency: newSettings.currency,
+        currency_symbol: newSettings.currencySymbol,
+        tax_rate: newSettings.taxRate,
+        low_stock_notif: newSettings.notifications.lowStock,
+        low_stock_email_notif: newSettings.notifications.lowStockEmail,
+        low_stock_email_address: newSettings.notifications.lowStockEmailAddress,
+        daily_report: newSettings.notifications.dailyReport,
+        weekly_report: newSettings.notifications.weeklyReport,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('business_settings').upsert(dbUpdate);
+
+      if (error) {
+        console.error("Error saving settings:", error);
+        toast.error("Failed to save settings to cloud");
       }
-
-      return newSettings;
-    });
-  }, [user]);
+    } catch (error) {
+      console.error("Critical error saving settings:", error);
+    }
+  }, [user, settings, settingsId]);
 
   const dismissAlert = useCallback((productId: string) => {
     setLowStockAlerts(prev =>

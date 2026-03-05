@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useData } from "@/context/DataContext";
+import { Customer } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
