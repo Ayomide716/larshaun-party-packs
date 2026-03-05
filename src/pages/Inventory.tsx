@@ -189,6 +189,7 @@ export default function Inventory() {
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Cost</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Margin</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Stock</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -197,6 +198,7 @@ export default function Inventory() {
               {filtered.map(p => {
                 const margin = ((p.price - p.cost) / p.price * 100).toFixed(0);
                 const isLow = p.stock <= p.minStock;
+                const stockValue = p.stock * p.cost;
                 return (
                   <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
@@ -216,6 +218,9 @@ export default function Inventory() {
                     <td className="px-4 py-3 text-right text-muted-foreground">{settings.currencySymbol}{p.cost.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="px-2 py-1 bg-[hsl(var(--forest)_/_0.12)] text-[hsl(var(--forest))] rounded-full text-xs font-medium">{margin}%</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-muted-foreground">
+                      {settings.currencySymbol}{stockValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={cn("font-semibold", isLow ? "text-destructive" : "text-foreground")}>{p.stock}</span>

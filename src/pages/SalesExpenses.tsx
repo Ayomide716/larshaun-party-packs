@@ -231,7 +231,8 @@ export default function SalesExpenses() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Customer</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Items</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Method</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
                     <th className="px-4 py-3"></th>
@@ -244,6 +245,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
                       <td className="px-4 py-3 font-medium">{sale.customerName}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
+                      <td className="px-4 py-3 text-center font-medium">{sale.products.reduce((acc, p) => acc + p.qty, 0)}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.paymentMethod}</td>
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
