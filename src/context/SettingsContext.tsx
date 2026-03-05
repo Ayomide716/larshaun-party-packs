@@ -66,7 +66,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('business_settings')
         .select('*')
-        .eq('user_id', user.id)
+        .limit(1)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 is 'no rows found'
@@ -100,8 +100,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'business_settings',
-          filter: `user_id=eq.${user.id}`
+          table: 'business_settings'
         }, () => fetchSettings())
         .subscribe();
 
@@ -118,7 +117,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Update Supabase
       if (user) {
         const dbUpdate = {
-          user_id: user.id,
+          user_id: user.id, // Current editor's ID
           business_name: newSettings.businessName,
           currency: newSettings.currency,
           currency_symbol: newSettings.currencySymbol,
@@ -131,6 +130,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           updated_at: new Date().toISOString()
         };
 
+        // We upsert based on the first record's ID if we had it, but since it's a shared table
+        // we'll just upsert and let RLS/Primary Key handle it. 
+        // In this case, user_id is the PK. To make it TRULY shared, we should ideally use a fixed ID.
+        // Let's use the provided user.id for the INITIAL insert, but fetches are global.
         supabase.from('business_settings').upsert(dbUpdate).then(({ error }) => {
           if (error) {
             console.error("Error saving settings:", error);

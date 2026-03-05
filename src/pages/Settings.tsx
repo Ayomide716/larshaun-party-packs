@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { Settings, Bell, Building2, DollarSign, Package, Mail, CheckCircle2, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
