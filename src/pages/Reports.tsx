@@ -50,12 +50,12 @@ export default function Reports() {
   const handleExportPDF = () => {
     const headers = ['Metric', 'Value'];
     const data = [
-      ['Total Revenue', `${settings.currencySymbol}${totalRevenue.toFixed(2)}`],
-      ['Total Expenses', `${settings.currencySymbol}${totalExpenses.toFixed(2)}`],
-      ['Net Profit', `${settings.currencySymbol}${profit.toFixed(2)}`],
+      ['Total Revenue', `${settings.currency} ${totalRevenue.toFixed(2)}`],
+      ['Total Expenses', `${settings.currency} ${totalExpenses.toFixed(2)}`],
+      ['Net Profit', `${settings.currency} ${profit.toFixed(2)}`],
       ['Profit Margin', `${margin}%`],
-      ['Average Order Value', `${settings.currencySymbol}${avgOrderValue.toFixed(2)}`],
-      ['VIP Revenue', `${settings.currencySymbol}${vipRevenue.toFixed(2)}`],
+      ['Average Order Value', `${settings.currency} ${avgOrderValue.toFixed(2)}`],
+      ['VIP Revenue', `${settings.currency} ${vipRevenue.toFixed(2)}`],
       ['At-Risk Customers', atRiskCount.toString()]
     ];
     exportToPDF(headers, data, 'Business Overview Report', `report_${new Date().toISOString().split('T')[0]}`);

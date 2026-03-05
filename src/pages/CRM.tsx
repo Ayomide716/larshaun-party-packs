@@ -74,7 +74,7 @@ export default function CRM() {
       c.email,
       c.phone,
       c.segment,
-      `${settings.currencySymbol}${c.totalSpent.toFixed(2)}`,
+      `${settings.currency} ${c.totalSpent.toFixed(2)}`,
       c.totalPurchases.toString()
     ]);
     exportToPDF(headers, data, 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);

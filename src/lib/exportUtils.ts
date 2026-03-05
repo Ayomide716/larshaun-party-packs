@@ -50,7 +50,7 @@ export const exportToPDF = (
   doc.save(`${filename}.pdf`);
 };
 
-export const generateInvoicePDF = (sale: Sale, currencySymbol: string = '₦', businessDetails?: any) => {
+export const generateInvoicePDF = (sale: Sale, currencyCode: string = 'NGN', businessDetails?: any) => {
   const doc = new jsPDF();
 
   // Header
@@ -86,8 +86,8 @@ export const generateInvoicePDF = (sale: Sale, currencySymbol: string = '₦', b
   const tableData = sale.products.map(p => [
     p.productName,
     p.qty.toString(),
-    `${currencySymbol}${p.price.toFixed(2)}`,
-    `${currencySymbol}${(p.price * p.qty).toFixed(2)}`
+    `${currencyCode} ${p.price.toFixed(2)}`,
+    `${currencyCode} ${(p.price * p.qty).toFixed(2)}`
   ]);
 
   autoTable(doc, {
@@ -121,11 +121,11 @@ export const generateInvoicePDF = (sale: Sale, currencySymbol: string = '₦', b
 
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(10);
-  doc.text(`${currencySymbol}${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
+  doc.text(`${currencyCode} ${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('', 'bold');
-  doc.text(`${currencySymbol}${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
+  doc.text(`${currencyCode} ${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
 
   // Footer
   doc.setFont('', 'normal');

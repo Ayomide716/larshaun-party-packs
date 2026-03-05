@@ -87,8 +87,8 @@ export default function Inventory() {
       p.name,
       p.sku,
       p.category,
-      `${settings.currencySymbol}${p.price.toFixed(2)}`,
-      `${settings.currencySymbol}${p.cost.toFixed(2)}`,
+      `${settings.currency} ${p.price.toFixed(2)}`,
+      `${settings.currency} ${p.cost.toFixed(2)}`,
       p.stock.toString()
     ]);
     exportToPDF(headers, data, 'Inventory List', `inventory_${new Date().toISOString().split('T')[0]}`);
