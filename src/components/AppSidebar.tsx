@@ -1,5 +1,6 @@
 import { LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Settings, BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -28,6 +29,7 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const { signOut } = useAuth();
+  const { settings } = useSettings();
   const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
@@ -46,9 +48,13 @@ export function AppSidebar() {
           <BookOpen className="w-4 h-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <div>
-            <p className="text-sm font-semibold text-sidebar-accent-foreground leading-none font-display">Posh</p>
-            <p className="text-xs text-sidebar-foreground/60 mt-0.5">Homewares</p>
+          <div className="overflow-hidden">
+            <p className="text-sm font-semibold text-sidebar-accent-foreground leading-none font-display truncate">
+              {settings.businessName.split(' ')[0]}
+            </p>
+            <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">
+              {settings.businessName.split(' ').slice(1).join(' ') || 'OS'}
+            </p>
           </div>
         )}
       </div>

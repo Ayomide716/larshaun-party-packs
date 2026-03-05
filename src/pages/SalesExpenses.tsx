@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { Sale, Expense } from "@/data/mockData";
 import { useData } from "@/context/DataContext";
+import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
 export default function SalesExpenses() {
   const { sales, addSale, expenses, addExpense, products, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
+  const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [saleStatusFilter, setSaleStatusFilter] = useState('All');
@@ -127,7 +127,7 @@ export default function SalesExpenses() {
   const handleExportSalesPDF = () => {
     exportToPDF(
       ['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'],
-      filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `₦${s.total.toFixed(2)}`]),
+      filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `${settings.currencySymbol}${s.total.toFixed(2)}`]),
       'Sales Report',
       `sales_${new Date().toISOString().split('T')[0]}`
     );
@@ -137,7 +137,7 @@ export default function SalesExpenses() {
   const handleExportExpensesPDF = () => {
     exportToPDF(
       ['Date', 'Category', 'Description', 'Vendor', 'Amount'],
-      filteredExpenses.map(e => [e.date, e.category, e.description, e.vendor, `₦${e.amount.toFixed(2)}`]),
+      filteredExpenses.map(e => [e.date, e.category, e.description, e.vendor, `${settings.currencySymbol}${e.amount.toFixed(2)}`]),
       'Expenses Report',
       `expenses_${new Date().toISOString().split('T')[0]}`
     );
@@ -169,15 +169,15 @@ export default function SalesExpenses() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-green-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
-          <p className="text-2xl font-display font-semibold text-green-700">₦{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-display font-semibold text-green-700">{settings.currencySymbol}{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-red-500" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
-          <p className="text-2xl font-display font-semibold text-red-600">₦{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-display font-semibold text-red-600">{settings.currencySymbol}{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-xs text-muted-foreground">Net Profit</span></div>
-          <p className={cn("text-2xl font-display font-semibold", profit >= 0 ? "text-primary" : "text-destructive")}>₦{profit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className={cn("text-2xl font-display font-semibold", profit >= 0 ? "text-primary" : "text-destructive")}>{settings.currencySymbol}{profit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -244,7 +244,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.paymentMethod}</td>
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
-                      <td className="px-4 py-3 text-right font-semibold">₦{sale.total.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <Button size="sm" variant="ghost" className="h-8 group" onClick={() => generateInvoicePDF(sale)}>
                           <Receipt className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -293,7 +293,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">₦{expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-600">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -387,7 +387,7 @@ export default function SalesExpenses() {
               <Input value={expenseForm.vendor} onChange={e => setExpenseForm(f => ({ ...f, vendor: e.target.value }))} placeholder="Vendor name" />
             </div>
             <div className="space-y-1">
-              <Label>Amount (₦)</Label>
+              <Label>Amount ({settings.currencySymbol})</Label>
               <Input type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: +e.target.value }))} />
             </div>
           </div>

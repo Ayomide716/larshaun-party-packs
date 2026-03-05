@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { Customer } from "@/data/mockData";
 import { useData } from "@/context/DataContext";
+import { useSettings } from "@/context/SettingsContext";
 import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,7 @@ const emptyCustomer: Omit<Customer, 'id'> = {
 
 export default function CRM() {
   const { customers, addCustomer, updateCustomer, sales, isLoading } = useData();
+  const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export default function CRM() {
       c.email,
       c.phone,
       c.segment,
-      `₦${c.totalSpent.toFixed(2)}`,
+      `${settings.currencySymbol}${c.totalSpent.toFixed(2)}`,
       c.totalPurchases.toString()
     ]);
     exportToPDF(headers, data, 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
@@ -118,7 +118,7 @@ export default function CRM() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-display font-semibold text-foreground">Customer CRM</h1>
-          <p className="text-muted-foreground mt-1">{customers.length} customers · ₦{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
+          <p className="text-muted-foreground mt-1">{customers.length} customers · {settings.currencySymbol}{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
         </div>
         <div className="flex gap-2">
           <ImportButton
@@ -164,7 +164,7 @@ export default function CRM() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", segmentColors[c.segment])}>{c.segment}</span>
-                    <p className="text-sm font-semibold mt-1">₦{c.totalSpent.toFixed(2)}</p>
+                    <p className="text-sm font-semibold mt-1">{settings.currencySymbol}{c.totalSpent.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">{c.totalPurchases} orders</p>
                   </div>
                 </div>
@@ -205,7 +205,7 @@ export default function CRM() {
                   <p className="text-xs text-muted-foreground">Orders</p>
                 </div>
                 <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-lg font-display font-semibold">₦{selected.totalSpent.toFixed(0)}</p>
+                  <p className="text-lg font-display font-semibold">{settings.currencySymbol}{selected.totalSpent.toFixed(0)}</p>
                   <p className="text-xs text-muted-foreground">Lifetime</p>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function CRM() {
                         <p className="text-muted-foreground">{s.products.length} item{s.products.length > 1 ? 's' : ''}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">₦{s.total.toFixed(2)}</p>
+                        <p className="font-semibold">{settings.currencySymbol}{s.total.toFixed(2)}</p>
                         <span className={cn("px-1.5 py-0.5 rounded-full", s.status === 'completed' ? "bg-green-100 text-green-700" : s.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>{s.status}</span>
                       </div>
                     </div>

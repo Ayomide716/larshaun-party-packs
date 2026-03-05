@@ -87,8 +87,8 @@ export default function Inventory() {
       p.name,
       p.sku,
       p.category,
-      `₦${p.price.toFixed(2)}`,
-      `₦${p.cost.toFixed(2)}`,
+      `${settings.currencySymbol}${p.price.toFixed(2)}`,
+      `${settings.currencySymbol}${p.cost.toFixed(2)}`,
       p.stock.toString()
     ]);
     exportToPDF(headers, data, 'Inventory List', `inventory_${new Date().toISOString().split('T')[0]}`);
@@ -134,7 +134,7 @@ export default function Inventory() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-display font-semibold text-foreground">Product Inventory</h1>
-          <p className="text-muted-foreground mt-1">{products.length} products · Inventory value: ₦{totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-muted-foreground mt-1">{products.length} products · Inventory value: {settings.currencySymbol}{totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="flex gap-2">
           <ImportButton
@@ -212,8 +212,8 @@ export default function Inventory() {
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{p.category}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">₦{p.price.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">₦{p.cost.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-medium">{settings.currencySymbol}{p.price.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{settings.currencySymbol}{p.cost.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="px-2 py-1 bg-[hsl(var(--forest)_/_0.12)] text-[hsl(var(--forest))] rounded-full text-xs font-medium">{margin}%</span>
                     </td>
@@ -267,11 +267,11 @@ export default function Inventory() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Selling Price (₦)</Label>
+              <Label>Selling Price ({settings.currencySymbol})</Label>
               <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Cost Price (₦)</Label>
+              <Label>Cost Price ({settings.currencySymbol})</Label>
               <Input type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: +e.target.value }))} />
             </div>
             <div className="space-y-1">

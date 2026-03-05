@@ -20,10 +20,15 @@ const CURRENCIES = [
 ];
 
 export default function SettingsPage() {
-  const { settings, updateSettings, lowStockAlerts, reorderRequests, clearReorder, dismissAlert } = useSettings();
+  const { settings, updateSettings, lowStockAlerts, reorderRequests, requestReorder, clearReorder, dismissAlert } = useSettings();
   const [saved, setSaved] = useState(false);
   const [localName, setLocalName] = useState(settings.businessName);
   const [localTax, setLocalTax] = useState(String(settings.taxRate));
+
+  useEffect(() => {
+    setLocalName(settings.businessName);
+    setLocalTax(String(settings.taxRate));
+  }, [settings.businessName, settings.taxRate]);
 
   const handleSaveBusiness = () => {
     updateSettings({ businessName: localName, taxRate: parseFloat(localTax) || 0 });
@@ -204,7 +209,12 @@ export default function SettingsPage() {
                         </Button>
                       </>
                     ) : (
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
+                        onClick={() => requestReorder(alert.productId)}
+                      >
                         <RefreshCw className="w-3 h-3 mr-1" />
                         Request Reorder
                       </Button>
