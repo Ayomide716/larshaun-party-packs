@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useData } from "@/context/DataContext";
-import { Sale, Expense } from "@/data/mockData";
+import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";

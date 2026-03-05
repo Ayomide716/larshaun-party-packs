@@ -68,9 +68,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         .from('business_settings')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is 'no rows found'
+      if (error) throw error;
 
       if (data) {
         setSettingsId(data.user_id);
