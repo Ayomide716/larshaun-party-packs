@@ -248,7 +248,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => generateInvoicePDF(sale)}>
+                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => generateInvoicePDF(sale, settings.currencySymbol, settings)}>
                           <Receipt className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         </Button>
                       </td>

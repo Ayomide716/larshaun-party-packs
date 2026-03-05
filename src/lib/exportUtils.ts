@@ -50,7 +50,7 @@ export const exportToPDF = (
   doc.save(`${filename}.pdf`);
 };
 
-export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
+export const generateInvoicePDF = (sale: Sale, currencySymbol: string = '₦', businessDetails?: any) => {
   const doc = new jsPDF();
 
   // Header
@@ -61,9 +61,9 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139); // Slate 500
 
-  // Business Details (Placeholder or Real)
+  // Business Details
   let yPos = 20;
-  doc.text(businessDetails?.name || 'Posh Homewares', 140, yPos);
+  doc.text(businessDetails?.businessName || 'Posh Homewares', 140, yPos);
   doc.text(businessDetails?.address || 'Lagos, Nigeria', 140, yPos + 5);
   doc.text(businessDetails?.city || 'HQ Office', 140, yPos + 10);
   doc.text(businessDetails?.email || 'hello@poshhomewares.com', 140, yPos + 15);
@@ -77,7 +77,7 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   doc.setFontSize(10);
   doc.text(sale.customerName, 14, yPos + 7);
 
-  doc.text(`Invoice Number: INV-${sale.id.toUpperCase()}`, 140, yPos);
+  doc.text(`Invoice Number: INV-${sale.id.toUpperCase().slice(0, 8)}`, 140, yPos);
   doc.text(`Date: ${sale.date}`, 140, yPos + 5);
   doc.text(`Payment Method: ${sale.paymentMethod}`, 140, yPos + 10);
   doc.text(`Status: ${sale.status.toUpperCase()}`, 140, yPos + 15);
@@ -86,8 +86,8 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   const tableData = sale.products.map(p => [
     p.productName,
     p.qty.toString(),
-    `₦${p.price.toFixed(2)}`,
-    `₦${(p.price * p.qty).toFixed(2)}`
+    `${currencySymbol}${p.price.toFixed(2)}`,
+    `${currencySymbol}${(p.price * p.qty).toFixed(2)}`
   ]);
 
   autoTable(doc, {
@@ -121,11 +121,11 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
 
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(10);
-  doc.text(`₦${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
+  doc.text(`${currencySymbol}${sale.total.toFixed(2)}`, 180, finalY, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('', 'bold');
-  doc.text(`₦${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
+  doc.text(`${currencySymbol}${sale.total.toFixed(2)}`, 180, finalY + 7, { align: 'right' });
 
   // Footer
   doc.setFont('', 'normal');
@@ -133,5 +133,5 @@ export const generateInvoicePDF = (sale: Sale, businessDetails?: any) => {
   doc.setTextColor(148, 163, 184); // Slate 400
   doc.text('Thank you for your business!', 105, 280, { align: 'center' });
 
-  doc.save(`Invoice_${sale.id.toUpperCase()}.pdf`);
+  doc.save(`Invoice_${sale.id.toUpperCase().slice(0, 8)}.pdf`);
 };
