@@ -28,6 +28,28 @@ export default function Dashboard() {
   const categoryData = getCategoryStats(sales, products);
   const topProducts = [...products].sort((a, b) => (b.price - b.cost) - (a.price - a.cost)).slice(0, 5);
 
+  // Trend Calculations
+  const currentMonthData = monthlyData[monthlyData.length - 1];
+  const prevMonthData = monthlyData[monthlyData.length - 2];
+
+  const calculateChange = (current: number, prev: number) => {
+    if (prev === 0) return current > 0 ? "+100%" : "0%";
+    const change = ((current - prev) / prev) * 100;
+    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  };
+
+  const revenueChange = calculateChange(currentMonthData.revenue, prevMonthData.revenue);
+  const profitChange = calculateChange(currentMonthData.profit, prevMonthData.profit);
+  const expenseChange = calculateChange(currentMonthData.expenses, prevMonthData.expenses);
+
+  // Real orders count for current and prev month
+  const currentMonthOrders = sales.filter(s => s.date.startsWith(new Date().toISOString().slice(0, 7))).length;
+  const lastMonthDate = new Date();
+  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+  const lastMonthPrefix = lastMonthDate.toISOString().slice(0, 7);
+  const prevMonthOrders = sales.filter(s => s.date.startsWith(lastMonthPrefix)).length;
+  const ordersChange = prevMonthOrders === 0 ? `+${currentMonthOrders} this month` : calculateChange(currentMonthOrders, prevMonthOrders);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -37,17 +59,45 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Revenue" value={`${settings.currencySymbol}${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+18.2%" changeType="positive" icon={DollarSign} iconColor="bg-primary/10" />
-        <StatCard title="Net Profit" value={`${settings.currencySymbol}${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+12.5%" changeType="positive" icon={TrendingUp} iconColor="bg-green-100" />
-        <StatCard title="Total Expenses" value={`${settings.currencySymbol}${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+4.1%" changeType="negative" icon={BarChart3} iconColor="bg-orange-100" />
-        <StatCard title="Total Orders" value={String(sales.length)} change="+8 this month" changeType="positive" icon={ShoppingCart} iconColor="bg-blue-100" />
+        <StatCard
+          title="Total Revenue"
+          value={`${settings.currencySymbol}${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change={`${revenueChange} from last month`}
+          changeType={currentMonthData.revenue >= prevMonthData.revenue ? "positive" : "negative"}
+          icon={DollarSign}
+          iconColor="bg-primary/10"
+        />
+        <StatCard
+          title="Net Profit"
+          value={`${settings.currencySymbol}${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change={`${profitChange} from last month`}
+          changeType={currentMonthData.profit >= prevMonthData.profit ? "positive" : "negative"}
+          icon={TrendingUp}
+          iconColor="bg-green-100"
+        />
+        <StatCard
+          title="Total Expenses"
+          value={`${settings.currencySymbol}${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change={`${expenseChange} from last month`}
+          changeType={currentMonthData.expenses <= prevMonthData.expenses ? "positive" : "negative"}
+          icon={BarChart3}
+          iconColor="bg-orange-100"
+        />
+        <StatCard
+          title="Total Orders"
+          value={String(sales.length)}
+          change={prevMonthOrders === 0 ? `+${currentMonthOrders} this month` : `${ordersChange} from last month`}
+          changeType={currentMonthOrders >= prevMonthOrders ? "positive" : "negative"}
+          icon={ShoppingCart}
+          iconColor="bg-blue-100"
+        />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Active Customers" value={String(customers.length)} change={`${vipCustomers} VIP`} changeType="positive" icon={Users} iconColor="bg-purple-100" />
         <StatCard title="Products Listed" value={String(products.length)} description="Across 5 categories" icon={Package} iconColor="bg-teal-100" />
         <StatCard title="Low Stock Alerts" value={String(lowStockCount)} changeType="negative" change="Needs attention" icon={AlertTriangle} iconColor="bg-red-100" />
-        <StatCard title="Margin Rate" value={`${((totalProfit / totalRevenue) * 100).toFixed(1)}%`} change="Healthy" changeType="positive" icon={Star} iconColor="bg-yellow-100" />
+        <StatCard title="Margin Rate" value={`${totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0'}%`} change="Healthy" changeType="positive" icon={Star} iconColor="bg-yellow-100" />
       </div>
 
       {/* Charts */}
