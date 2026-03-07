@@ -3,8 +3,11 @@ import { useData } from "@/context/DataContext";
 import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
-import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
+import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard } from "lucide-react";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { ExpenseVoucherModal } from "@/components/ExpenseVoucherModal";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonTableRow } from "@/components/SkeletonCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -28,6 +31,7 @@ export default function SalesExpenses() {
   const [saleDialog, setSaleDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [voucherExpense, setVoucherExpense] = useState<Expense | null>(null);
 
   const [saleForm, setSaleForm] = useState({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
   const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
