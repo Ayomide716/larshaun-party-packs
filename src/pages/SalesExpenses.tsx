@@ -4,6 +4,7 @@ import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
+import { ReceiptModal } from "@/components/ReceiptModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
