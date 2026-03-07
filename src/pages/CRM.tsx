@@ -15,7 +15,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import { EmptyState } from "@/components/EmptyState";
-import { SkeletonCard } from "@/components/SkeletonCard";
+import { SkeletonStatCard } from "@/components/SkeletonCard";
 
 const segmentColors: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-800",
