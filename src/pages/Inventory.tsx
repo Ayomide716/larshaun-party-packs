@@ -209,7 +209,11 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => {
+              {filtered.length === 0 ? (
+                <tr><td colSpan={9}>
+                  <EmptyState icon={Package} title="No products found" description={search ? "Try a different search term." : "Add your first product to get started."} actionLabel="Add Product" onAction={openAdd} />
+                </td></tr>
+              ) : filtered.map(p => {
                 const margin = ((p.price - p.cost) / p.price * 100).toFixed(0);
                 const isLow = p.stock <= p.minStock;
                 const stockValue = p.stock * p.cost;

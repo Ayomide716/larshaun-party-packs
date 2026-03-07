@@ -157,7 +157,9 @@ export default function CRM() {
             <Input placeholder="Search customers…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="space-y-2">
-            {filtered.map(c => (
+            {filtered.length === 0 ? (
+              <EmptyState icon={Users} title="No customers found" description={search ? "Try a different search term." : "Add your first customer to get started."} actionLabel="Add Customer" onAction={openAdd} />
+            ) : filtered.map(c => (
               <div key={c.id} onClick={() => setSelectedId(c.id === selectedId ? null : c.id)}
                 className={cn("bg-card border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all", selectedId === c.id ? "border-primary bg-primary/5" : "border-border")}>
                 <div className="flex items-start justify-between">
