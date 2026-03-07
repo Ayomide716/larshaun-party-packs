@@ -4,6 +4,7 @@ import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
+import { ReceiptModal } from "@/components/ReceiptModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV, exportToPDF, generateInvoicePDF } from "@/lib/exportUtils";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
@@ -26,6 +27,7 @@ export default function SalesExpenses() {
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
   const [saleDialog, setSaleDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
 
   const [saleForm, setSaleForm] = useState({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
   const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
@@ -250,7 +252,7 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => generateInvoicePDF(sale, settings.currency, settings)}>
+                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => setReceiptSale(sale)}>
                           <Receipt className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         </Button>
                       </td>
@@ -401,6 +403,8 @@ export default function SalesExpenses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
     </div>
   );
 }
