@@ -403,6 +403,8 @@ export default function SalesExpenses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
     </div>
   );
 }
