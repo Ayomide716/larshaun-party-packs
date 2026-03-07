@@ -259,12 +259,6 @@ export default function Inventory() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Package className="w-10 h-10 mb-3 opacity-30" />
-              <p>No products found</p>
-            </div>
-          )}
         </div>
       </div>
 
