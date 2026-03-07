@@ -27,6 +27,7 @@ export default function SalesExpenses() {
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
   const [saleDialog, setSaleDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
 
   const [saleForm, setSaleForm] = useState({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
   const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
