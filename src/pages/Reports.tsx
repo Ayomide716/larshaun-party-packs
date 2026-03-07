@@ -14,12 +14,7 @@ export default function Reports() {
   const { settings } = useSettings();
 
   if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Generating reports...</span>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   const topCustomersData = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);

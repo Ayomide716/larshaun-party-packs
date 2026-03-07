@@ -110,9 +110,13 @@ export default function CRM() {
 
   if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Syncing customers...</span>
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-4 gap-3">
+          {[0,1,2,3].map(i => <SkeletonStatCard key={i} />)}
+        </div>
+        <div className="space-y-3">
+          {[0,1,2,3].map(i => <div key={i} className="bg-muted animate-pulse rounded-xl h-20" />)}
+        </div>
       </div>
     );
   }
