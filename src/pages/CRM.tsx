@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import type { Customer } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
-import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Loader2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/ExportButton";
 import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonCard } from "@/components/SkeletonCard";
 
 const segmentColors: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-800",

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Product } from "@/data/mockData";
 import { useData } from "@/context/DataContext";
-import { Plus, Search, Edit2, Trash2, Package, AlertTriangle, Loader2 } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Package, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { useSettings } from "@/context/SettingsContext";
 import { ExportButton } from "@/components/ExportButton";
 import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonTableRow } from "@/components/SkeletonCard";
 
 const categories = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
 const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers": "💧", "Kitchen Runners": "🏡", "Ceramic Vases": "🏺", "Scented Candles": "🕯️" };
@@ -122,9 +124,21 @@ export default function Inventory() {
 
   if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Syncing inventory...</span>
+      <div className="p-6 space-y-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
+            <div className="h-4 w-72 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[0,1,2,3,4].map(i => <div key={i} className="bg-muted animate-pulse rounded-xl h-20" />)}
+        </div>
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <tbody>{[0,1,2,3,4].map(i => <SkeletonTableRow key={i} cols={8} />)}</tbody>
+          </table>
+        </div>
       </div>
     );
   }

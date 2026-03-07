@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import { useSettings } from "@/context/SettingsContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, BarChart3 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import { getMonthlyStats, getCategoryStats } from "@/lib/dataUtils";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonDashboard } from "@/components/SkeletonCard";
 
 export default function Reports() {
   const { sales, expenses, products, customers, isLoading } = useData();
