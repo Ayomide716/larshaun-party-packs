@@ -261,7 +261,13 @@ export default function SalesExpenses() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSales.map(sale => (
+                  {isLoading ? (
+                    [0,1,2,3].map(i => <SkeletonTableRow key={i} cols={9} />)
+                  ) : filteredSales.length === 0 ? (
+                    <tr><td colSpan={9}>
+                      <EmptyState icon={ShoppingBag} title="No sales yet" description="Record your first sale using the button above." />
+                    </td></tr>
+                  ) : filteredSales.map(sale => (
                     <tr key={sale.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.toUpperCase()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
@@ -310,16 +316,26 @@ export default function SalesExpenses() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredExpenses.map(expense => (
+                  {filteredExpenses.length === 0 ? (
+                    <tr><td colSpan={6}>
+                      <EmptyState icon={CreditCard} title="No expenses recorded" description="Log your first business expense using the button above." />
+                    </td></tr>
+                  ) : filteredExpenses.map(expense => (
                     <tr key={expense.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-muted-foreground">{expense.date}</td>
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-destructive">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => setVoucherExpense(expense)}>
+                          <FileText className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -425,6 +441,7 @@ export default function SalesExpenses() {
       </Dialog>
 
       <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
+      <ExpenseVoucherModal expense={voucherExpense} open={!!voucherExpense} onClose={() => setVoucherExpense(null)} />
     </div>
   );
 }
