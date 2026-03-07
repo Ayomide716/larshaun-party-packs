@@ -1,21 +1,17 @@
-import { BarChart3, DollarSign, Package, ShoppingCart, TrendingUp, Users, AlertTriangle, Star, Loader2 } from "lucide-react";
+import { BarChart3, DollarSign, Package, ShoppingCart, TrendingUp, Users, AlertTriangle, Star } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { useData } from "@/context/DataContext";
 import { useSettings } from "@/context/SettingsContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { getMonthlyStats, getCategoryStats } from "@/lib/dataUtils";
+import { SkeletonDashboard } from "@/components/SkeletonCard";
 
 export default function Dashboard() {
   const { sales, expenses, products, customers, isLoading } = useData();
   const { settings } = useSettings();
 
   if (isLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Loading your dashboard...</span>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
   const totalRevenue = sales.filter(s => s.status === "completed").reduce((sum, s) => sum + s.total, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);

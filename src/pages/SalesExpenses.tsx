@@ -3,8 +3,11 @@ import { useData } from "@/context/DataContext";
 import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
-import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, X, Loader2 } from "lucide-react";
+import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard } from "lucide-react";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { ExpenseVoucherModal } from "@/components/ExpenseVoucherModal";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonTableRow } from "@/components/SkeletonCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -28,6 +31,7 @@ export default function SalesExpenses() {
   const [saleDialog, setSaleDialog] = useState(false);
   const [expenseDialog, setExpenseDialog] = useState(false);
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [voucherExpense, setVoucherExpense] = useState<Expense | null>(null);
 
   const [saleForm, setSaleForm] = useState({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
   const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
@@ -149,9 +153,25 @@ export default function SalesExpenses() {
 
   if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Syncing transactions...</span>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {[0,1,2].map(i => (
+            <div key={i} className="bg-card rounded-2xl p-4 border border-border animate-pulse h-24" />
+          ))}
+        </div>
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <tbody>
+              {[0,1,2,3,4].map(i => <SkeletonTableRow key={i} cols={9} />)}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
@@ -241,7 +261,13 @@ export default function SalesExpenses() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSales.map(sale => (
+                  {isLoading ? (
+                    [0,1,2,3].map(i => <SkeletonTableRow key={i} cols={9} />)
+                  ) : filteredSales.length === 0 ? (
+                    <tr><td colSpan={9}>
+                      <EmptyState icon={ShoppingBag} title="No sales yet" description="Record your first sale using the button above." />
+                    </td></tr>
+                  ) : filteredSales.map(sale => (
                     <tr key={sale.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.toUpperCase()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
@@ -290,16 +316,26 @@ export default function SalesExpenses() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredExpenses.map(expense => (
+                  {filteredExpenses.length === 0 ? (
+                    <tr><td colSpan={6}>
+                      <EmptyState icon={CreditCard} title="No expenses recorded" description="Log your first business expense using the button above." />
+                    </td></tr>
+                  ) : filteredExpenses.map(expense => (
                     <tr key={expense.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-muted-foreground">{expense.date}</td>
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-destructive">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => setVoucherExpense(expense)}>
+                          <FileText className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -405,6 +441,7 @@ export default function SalesExpenses() {
       </Dialog>
 
       <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
+      <ExpenseVoucherModal expense={voucherExpense} open={!!voucherExpense} onClose={() => setVoucherExpense(null)} />
     </div>
   );
 }

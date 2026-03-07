@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import type { Customer } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
-import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Loader2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/ExportButton";
 import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonStatCard } from "@/components/SkeletonCard";
 
 const segmentColors: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-800",
@@ -108,9 +110,13 @@ export default function CRM() {
 
   if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Syncing customers...</span>
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-4 gap-3">
+          {[0,1,2,3].map(i => <SkeletonStatCard key={i} />)}
+        </div>
+        <div className="space-y-3">
+          {[0,1,2,3].map(i => <div key={i} className="bg-muted animate-pulse rounded-xl h-20" />)}
+        </div>
       </div>
     );
   }
@@ -151,7 +157,9 @@ export default function CRM() {
             <Input placeholder="Search customers…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="space-y-2">
-            {filtered.map(c => (
+            {filtered.length === 0 ? (
+              <EmptyState icon={Users} title="No customers found" description={search ? "Try a different search term." : "Add your first customer to get started."} actionLabel="Add Customer" onAction={openAdd} />
+            ) : filtered.map(c => (
               <div key={c.id} onClick={() => setSelectedId(c.id === selectedId ? null : c.id)}
                 className={cn("bg-card border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all", selectedId === c.id ? "border-primary bg-primary/5" : "border-border")}>
                 <div className="flex items-start justify-between">

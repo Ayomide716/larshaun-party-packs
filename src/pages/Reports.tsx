@@ -2,22 +2,19 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import { useSettings } from "@/context/SettingsContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Package, ShoppingCart, BarChart3 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import { getMonthlyStats, getCategoryStats } from "@/lib/dataUtils";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonDashboard } from "@/components/SkeletonCard";
 
 export default function Reports() {
   const { sales, expenses, products, customers, isLoading } = useData();
   const { settings } = useSettings();
 
   if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center p-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Generating reports...</span>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   const topCustomersData = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
