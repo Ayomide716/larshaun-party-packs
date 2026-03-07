@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV, exportToPDF, generateInvoicePDF } from "@/lib/exportUtils";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
