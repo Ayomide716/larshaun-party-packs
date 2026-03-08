@@ -289,7 +289,7 @@ export default function SalesExpenses() {
                     <tr><td colSpan={9}><EmptyState icon={ShoppingBag} title="No sales yet" description="Record your first sale using the button above." /></td></tr>
                   ) : filteredSales.map(sale => (
                     <tr key={sale.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.slice(0, 8).toUpperCase()}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.invoiceRef || sale.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
                       <td className="px-4 py-3 font-medium">{sale.customerName}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs max-w-[160px] truncate">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
