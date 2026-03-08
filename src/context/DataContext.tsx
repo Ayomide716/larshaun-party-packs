@@ -124,8 +124,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const addProduct = async (product: Omit<Product, 'id'>) => {
         if (!user) return;
-        const { data, error } = await supabase.from('products').insert({
-            user_id: user.id,
+    const { data, error } = await supabase.from('products').insert({
             name: product.name,
             category: product.category,
             sku: product.sku,
