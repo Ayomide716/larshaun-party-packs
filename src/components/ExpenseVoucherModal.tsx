@@ -1,9 +1,7 @@
-import { useRef } from "react";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { Expense } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
@@ -25,7 +23,6 @@ const categoryColors: Record<string, string> = {
 
 export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherModalProps) {
   const { settings } = useSettings();
-  const voucherPreviewRef = useRef<HTMLDivElement>(null);
 
   if (!expense) return null;
 
@@ -35,30 +32,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
   const bizName = settings.businessName;
   const bizPhone = settings.businessPhone || "0707 519 4600";
   const bizEmail = settings.businessEmail || "poshomes@gmail.com";
-
-  const captureVoucher = async (): Promise<HTMLCanvasElement | null> => {
-    if (!voucherPreviewRef.current) return null;
-    return html2canvas(voucherPreviewRef.current, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
-  };
-
-  const handleDownloadImage = async () => {
-    try {
-      const canvas = await captureVoucher();
-      if (!canvas) return;
-      const link = document.createElement("a");
-      link.download = `Voucher_${voucherLabel}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("Voucher image downloaded!");
-    } catch {
-      toast.error("Failed to download voucher image");
-    }
-  };
 
   const drawDashedLine = (doc: jsPDF, x1: number, y: number, x2: number) => {
     const segLen = 4;
@@ -84,7 +57,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
 
       let y = 36;
 
-      // Business name
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.setTextColor(...darkColor);
@@ -100,7 +72,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       y += 11;
       doc.text("Expense Voucher", W / 2, y, { align: "center" });
 
-      // Category
       y += 18;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
@@ -111,7 +82,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       drawDashedLine(doc, 20, y, W - 20);
       y += 14;
 
-      // Meta rows
       const rows: [string, string][] = [
         ["Voucher No.", `#${voucherLabel}`],
         ["Date", expense.date],
@@ -135,7 +105,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       drawDashedLine(doc, 20, y, W - 20);
       y += 14;
 
-      // Amount
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.setTextColor(...slateColor);
@@ -150,7 +119,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
         { align: "right" }
       );
 
-      // Footer
       y += 32;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -159,7 +127,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       y += 11;
       doc.text(`${bizName} · Internal Finance Document`, W / 2, y, { align: "center" });
 
-      // Crop to content
       doc.internal.pageSize.height = y + 30;
       doc.save(`Voucher_${voucherLabel}.pdf`);
       toast.success("Voucher PDF downloaded!");
@@ -175,20 +142,14 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-lg">Expense Voucher</DialogTitle>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
-                <FileText className="w-3.5 h-3.5" /> PDF
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleDownloadImage} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> Image
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
+              <FileText className="w-3.5 h-3.5" /> Download PDF
+            </Button>
           </div>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[72vh] p-4 bg-muted/30">
           <div
-            ref={voucherPreviewRef}
             style={{
               fontFamily: "'Georgia', serif",
               background: "#ffffff",

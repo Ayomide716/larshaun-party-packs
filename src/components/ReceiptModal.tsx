@@ -1,9 +1,7 @@
-import { useRef } from "react";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { Sale } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
@@ -16,7 +14,6 @@ interface ReceiptModalProps {
 
 export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   const { settings } = useSettings();
-  const receiptRef = useRef<HTMLDivElement>(null);
 
   if (!sale) return null;
 
@@ -32,30 +29,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   const bizName = settings.businessName;
   const bizPhone = settings.businessPhone || "0707 519 4600";
   const bizEmail = settings.businessEmail || "poshomes@gmail.com";
-
-  const captureReceipt = async (): Promise<HTMLCanvasElement | null> => {
-    if (!receiptRef.current) return null;
-    return html2canvas(receiptRef.current, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
-  };
-
-  const handleDownloadImage = async () => {
-    try {
-      const canvas = await captureReceipt();
-      if (!canvas) return;
-      const link = document.createElement("a");
-      link.download = `Receipt_${receiptLabel}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("Receipt image downloaded!");
-    } catch {
-      toast.error("Failed to download receipt image");
-    }
-  };
 
   const drawDashedLine = (doc: jsPDF, x1: number, y: number, x2: number) => {
     const segLen = 4;
@@ -81,7 +54,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
 
       let y = 36;
 
-      // Business name
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.setTextColor(...darkColor);
@@ -98,11 +70,9 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       y += 11;
       doc.text(bizEmail, W / 2, y, { align: "center" });
 
-      // Dashed separator
       y += 16;
       drawDashedLine(doc, 20, y, W - 20);
 
-      // Meta rows
       const metaRows: [string, string][] = [
         ["Receipt No.", `#${receiptLabel}`],
         ["Date", sale.date],
@@ -123,12 +93,10 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         y += 14;
       });
 
-      // Dashed separator
       y += 4;
       drawDashedLine(doc, 20, y, W - 20);
       y += 12;
 
-      // Items header
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
       doc.setTextColor(...slateColor);
@@ -138,7 +106,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       doc.text("TOTAL", W - 20, y, { align: "right" });
       y += 10;
 
-      // Items
       sale.products.forEach((p) => {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
@@ -154,12 +121,10 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         y += nameLines.length > 1 ? nameLines.length * 11 + 4 : 14;
       });
 
-      // Dashed separator
       y += 4;
       drawDashedLine(doc, 20, y, W - 20);
       y += 12;
 
-      // Subtotal
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(...slateColor);
@@ -175,7 +140,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         doc.text(`${sym}${taxAmount.toFixed(2)}`, W - 20, y, { align: "right" });
       }
 
-      // Grand total
       y += 14;
       doc.setDrawColor(...darkColor);
       doc.setLineWidth(1.5);
@@ -188,7 +152,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       doc.setTextColor(...primaryColor);
       doc.text(`${sym}${grandTotal.toFixed(2)}`, W - 20, y, { align: "right" });
 
-      // Footer
       y += 30;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -197,9 +160,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       y += 11;
       doc.text(bizName, W / 2, y, { align: "center" });
 
-      // Crop page to actual content
       doc.internal.pageSize.height = y + 30;
-
       doc.save(`Receipt_${receiptLabel}.pdf`);
       toast.success("Receipt PDF downloaded!");
     } catch (err) {
@@ -221,21 +182,14 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-lg">Receipt Preview</DialogTitle>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
-                <FileText className="w-3.5 h-3.5" /> PDF
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleDownloadImage} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> Image
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
+              <FileText className="w-3.5 h-3.5" /> Download PDF
+            </Button>
           </div>
         </DialogHeader>
 
-        {/* Receipt preview captured by html2canvas */}
         <div className="overflow-y-auto max-h-[72vh] p-4 bg-muted/30">
           <div
-            ref={receiptRef}
             style={{
               fontFamily: "'Georgia', serif",
               background: "#ffffff",
