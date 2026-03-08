@@ -217,20 +217,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const addSale = async (sale: Omit<Sale, 'id'>) => {
         if (!user) return;
-        // 1. Insert sale
-        const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+        // 1. Insert sale — invoice_ref requires running supabase_invoice_ref_migration.sql first
+        const salePayload: any = {
             date: sale.date || null,
             customer_id: sale.customerId,
             customer_name: sale.customerName,
             total: sale.total,
             status: sale.status,
             payment_method: sale.paymentMethod,
-            // invoice_ref column — add via migration if not present:
-            // ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_ref text;
-            invoice_ref: sale.invoiceRef || null
-        }).select().single();
+            invoice_ref: sale.invoiceRef || null,
+        };
+
+        const { data: saleData, error: saleError } = await supabase
+            .from('sales')
+            .insert(salePayload)
+            .select()
+            .single();
 
         if (saleError) {
+            // If error is about missing invoice_ref column, retry without it
+            if (saleError.message?.includes('invoice_ref')) {
+                delete salePayload.invoice_ref;
+                const { data: retryData, error: retryError } = await supabase
+                    .from('sales')
+                    .insert(salePayload)
+                    .select()
+                    .single();
+                if (retryError) { console.error("Error adding sale:", retryError); throw retryError; }
+                const saleItems2 = sale.products.map(p => ({
+                    sale_id: retryData.id,
+                    product_id: p.productId,
+                    product_name: p.productName,
+                    qty: p.qty,
+                    price: p.price
+                }));
+                const { error: ie2 } = await supabase.from('sale_items').insert(saleItems2);
+                if (ie2) throw ie2;
+                setSales(prev => [{ ...sale, id: retryData.id }, ...prev]);
+                return;
+            }
             console.error("Error adding sale:", saleError);
             throw saleError;
         }
@@ -284,18 +309,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateSale = async (id: string, sale: Partial<Omit<Sale, 'id'>>) => {
-        const updates: any = { ...sale };
+        const updates: any = {};
+        if (sale.date !== undefined) updates.date = sale.date || null;
+        if (sale.total !== undefined) updates.total = sale.total;
+        if (sale.status !== undefined) updates.status = sale.status;
         if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
         if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
         if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
         if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef || null;
-        delete updates.customerId;
-        delete updates.customerName;
-        delete updates.paymentMethod;
-        delete updates.invoiceRef;
-        delete updates.products;
+
         const { error } = await supabase.from('sales').update(updates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            // Gracefully retry without invoice_ref if column doesn't exist yet
+            if (error.message?.includes('invoice_ref')) {
+                delete updates.invoice_ref;
+                const { error: retryError } = await supabase.from('sales').update(updates).eq('id', id);
+                if (retryError) throw retryError;
+            } else {
+                throw error;
+            }
+        }
 
         // If products are being updated, replace sale_items
         if (sale.products) {
