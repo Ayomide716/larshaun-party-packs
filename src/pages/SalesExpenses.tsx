@@ -328,7 +328,7 @@ export default function SalesExpenses() {
           </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[560px]">
+              <table className="w-full text-sm min-w-[680px]">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
