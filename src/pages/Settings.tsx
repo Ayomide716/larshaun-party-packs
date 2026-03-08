@@ -23,15 +23,19 @@ export default function SettingsPage() {
   const { settings, updateSettings, lowStockAlerts, reorderRequests, requestReorder, clearReorder, dismissAlert } = useSettings();
   const [saved, setSaved] = useState(false);
   const [localName, setLocalName] = useState(settings.businessName);
+  const [localPhone, setLocalPhone] = useState(settings.businessPhone);
+  const [localEmail, setLocalEmail] = useState(settings.businessEmail);
   const [localTax, setLocalTax] = useState(String(settings.taxRate));
 
   useEffect(() => {
     setLocalName(settings.businessName);
+    setLocalPhone(settings.businessPhone);
+    setLocalEmail(settings.businessEmail);
     setLocalTax(String(settings.taxRate));
-  }, [settings.businessName, settings.taxRate]);
+  }, [settings.businessName, settings.businessPhone, settings.businessEmail, settings.taxRate]);
 
   const handleSaveBusiness = () => {
-    updateSettings({ businessName: localName, taxRate: parseFloat(localTax) || 0 });
+    updateSettings({ businessName: localName, businessPhone: localPhone, businessEmail: localEmail, taxRate: parseFloat(localTax) || 0 });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
