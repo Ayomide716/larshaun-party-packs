@@ -3,7 +3,7 @@ import { useData } from "@/context/DataContext";
 import type { Sale, Expense } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
-import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard } from "lucide-react";
+import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard, Edit2, Trash2 } from "lucide-react";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { ExpenseVoucherModal } from "@/components/ExpenseVoucherModal";
 import { EmptyState } from "@/components/EmptyState";
@@ -21,20 +21,43 @@ import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
+const emptySaleForm = () => ({
+  customerId: '',
+  date: new Date().toISOString().split('T')[0],
+  paymentMethod: 'Credit Card',
+  status: 'completed' as Sale['status'],
+  items: [{ productId: '', qty: 1 }]
+});
+
+const emptyExpenseForm = () => ({
+  date: new Date().toISOString().split('T')[0],
+  category: 'Inventory',
+  description: '',
+  amount: 0,
+  vendor: ''
+});
+
 export default function SalesExpenses() {
-  const { sales, addSale, expenses, addExpense, products, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
+  const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [saleStatusFilter, setSaleStatusFilter] = useState('All');
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
+
+  // Sale dialog state
   const [saleDialog, setSaleDialog] = useState(false);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [saleForm, setSaleForm] = useState(emptySaleForm());
+
+  // Expense dialog state
   const [expenseDialog, setExpenseDialog] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [expenseForm, setExpenseForm] = useState(emptyExpenseForm());
+
+  // Receipt / voucher modal
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
   const [voucherExpense, setVoucherExpense] = useState<Expense | null>(null);
-
-  const [saleForm, setSaleForm] = useState({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
-  const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
 
   const totalRevenue = sales.filter(s => s.status === 'completed').reduce((s, sale) => s + sale.total, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -54,74 +77,128 @@ export default function SalesExpenses() {
     return matchesSearch && matchesCategory && matchesDate;
   });
 
+  // --- Sale helpers ---
+  const openAddSale = () => {
+    setEditingSale(null);
+    setSaleForm(emptySaleForm());
+    setSaleDialog(true);
+  };
+
+  const openEditSale = (sale: Sale) => {
+    setEditingSale(sale);
+    setSaleForm({
+      customerId: sale.customerId,
+      date: sale.date,
+      paymentMethod: sale.paymentMethod,
+      status: sale.status,
+      items: sale.products.map(p => ({ productId: p.productId, qty: p.qty }))
+    });
+    setSaleDialog(true);
+  };
+
   const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', qty: 1 }] }));
   const removeSaleItem = (i: number) => setSaleForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
-  const updateSaleItem = (i: number, field: string, value: string | number) => setSaleForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
+  const updateSaleItem = (i: number, field: string, value: string | number) =>
+    setSaleForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
 
   const saveSale = async () => {
-    const customer = customers.find(c => c.id === saleForm.customerId);
-    if (!customer) return;
+    if (editingSale) {
+      // Edit: only update metadata fields (status, date, paymentMethod)
+      try {
+        await updateSale(editingSale.id, {
+          date: saleForm.date,
+          status: saleForm.status,
+          paymentMethod: saleForm.paymentMethod,
+        });
+        toast.success("Sale updated");
+        setSaleDialog(false);
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to update sale");
+      }
+      return;
+    }
 
-    // Validate stock and prepare payload
+    // New sale
+    const customer = customers.find(c => c.id === saleForm.customerId);
+    if (!customer) { toast.error("Please select a customer"); return; }
+
     const saleItems = [];
     for (const item of saleForm.items) {
       if (!item.productId) continue;
       const product = products.find(p => p.id === item.productId);
       if (!product) continue;
-
       if (product.stock < item.qty) {
         toast.error(`Not enough stock for ${product.name}. Available: ${product.stock}`);
         return;
       }
-
       saleItems.push({ productId: item.productId, productName: product.name, qty: item.qty, price: product.price });
     }
 
-    if (saleItems.length === 0) {
-      toast.error('Add at least one valid product.');
-      return;
-    }
+    if (saleItems.length === 0) { toast.error('Add at least one valid product.'); return; }
 
     const total = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
 
     try {
-      // Persist to Supabase
-      await addSale({
-        date: saleForm.date,
-        customerId: saleForm.customerId,
-        customerName: customer.name,
-        products: saleItems,
-        total,
-        status: saleForm.status,
-        paymentMethod: saleForm.paymentMethod
-      });
-
-      // Mutate pseudo-database globally (only if status is completed)
+      await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod });
       if (saleForm.status === 'completed') {
-        for (const i of saleItems) {
-          await updateProductStock(i.productId, i.qty);
-        }
+        for (const i of saleItems) await updateProductStock(i.productId, i.qty);
         await updateCustomerStats(customer.id, total, saleForm.date);
         toast.success('Sale recorded and inventory updated.');
       } else {
         toast.success('Pending sale recorded.');
       }
-
       setSaleDialog(false);
-      setSaleForm({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed', items: [{ productId: '', qty: 1 }] });
-    } catch (error) {
-      toast.error("Failed to save sale");
+      setSaleForm(emptySaleForm());
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save sale");
     }
+  };
+
+  const removeSale = async (id: string) => {
+    try {
+      await deleteSale(id);
+      toast.success("Sale deleted");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete sale");
+    }
+  };
+
+  // --- Expense helpers ---
+  const openAddExpense = () => {
+    setEditingExpense(null);
+    setExpenseForm(emptyExpenseForm());
+    setExpenseDialog(true);
+  };
+
+  const openEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseForm({ date: expense.date, category: expense.category, description: expense.description, amount: expense.amount, vendor: expense.vendor });
+    setExpenseDialog(true);
   };
 
   const saveExpense = async () => {
     try {
-      await addExpense(expenseForm);
+      if (editingExpense) {
+        await updateExpense(editingExpense.id, expenseForm);
+        toast.success("Expense updated");
+      } else {
+        await addExpense(expenseForm);
+        toast.success("Expense recorded");
+      }
       setExpenseDialog(false);
-      setExpenseForm({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
-      toast.success("Expense recorded");
-    } catch (error) {
-      toast.error("Failed to save expense");
+      setExpenseForm(emptyExpenseForm());
+      setEditingExpense(null);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save expense");
+    }
+  };
+
+  const removeExpense = async (id: string) => {
+    try {
+      await deleteExpense(id);
+      toast.success("Expense deleted");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete expense");
     }
   };
 
@@ -136,8 +213,7 @@ export default function SalesExpenses() {
     exportToPDF(
       ['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'],
       filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `${settings.currencySymbol}${s.total.toFixed(2)}`]),
-      'Sales Report',
-      `sales_${new Date().toISOString().split('T')[0]}`
+      'Sales Report', `sales_${new Date().toISOString().split('T')[0]}`
     );
   };
 
@@ -146,8 +222,7 @@ export default function SalesExpenses() {
     exportToPDF(
       ['Date', 'Category', 'Description', 'Vendor', 'Amount'],
       filteredExpenses.map(e => [e.date, e.category, e.description, e.vendor, `${settings.currencySymbol}${e.amount.toFixed(2)}`]),
-      'Expenses Report',
-      `expenses_${new Date().toISOString().split('T')[0]}`
+      'Expenses Report', `expenses_${new Date().toISOString().split('T')[0]}`
     );
   };
 
@@ -161,15 +236,11 @@ export default function SalesExpenses() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          {[0,1,2].map(i => (
-            <div key={i} className="bg-card rounded-2xl p-4 border border-border animate-pulse h-24" />
-          ))}
+          {[0,1,2].map(i => <div key={i} className="bg-card rounded-2xl p-4 border border-border animate-pulse h-24" />)}
         </div>
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <table className="w-full text-sm">
-            <tbody>
-              {[0,1,2,3,4].map(i => <SkeletonTableRow key={i} cols={9} />)}
-            </tbody>
+            <tbody>{[0,1,2,3,4].map(i => <SkeletonTableRow key={i} cols={9} />)}</tbody>
           </table>
         </div>
       </div>
@@ -184,8 +255,8 @@ export default function SalesExpenses() {
           <p className="text-muted-foreground mt-1">Track every transaction and expense</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setExpenseDialog(true)} variant="outline"><TrendingDown className="w-4 h-4 mr-2" />Add Expense</Button>
-          <Button onClick={() => setSaleDialog(true)} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Record Sale</Button>
+          <Button onClick={openAddExpense} variant="outline"><TrendingDown className="w-4 h-4 mr-2" />Add Expense</Button>
+          <Button onClick={openAddSale} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Record Sale</Button>
         </div>
       </div>
 
@@ -226,14 +297,13 @@ export default function SalesExpenses() {
           </div>
         </div>
 
+        {/* SALES TAB */}
         <TabsContent value="sales" className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground hidden sm:block">Status:</span>
               <Select value={saleStatusFilter} onValueChange={setSaleStatusFilter}>
-                <SelectTrigger className="w-[130px] h-9 bg-card">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
+                <SelectTrigger className="w-[130px] h-9 bg-card"><SelectValue placeholder="All Statuses" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Statuses</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -254,7 +324,7 @@ export default function SalesExpenses() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Customer</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Items</th>
                     <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Qty</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Method</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
                     <th className="px-4 py-3"></th>
@@ -269,7 +339,7 @@ export default function SalesExpenses() {
                     </td></tr>
                   ) : filteredSales.map(sale => (
                     <tr key={sale.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.toUpperCase()}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
                       <td className="px-4 py-3 font-medium">{sale.customerName}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
@@ -278,9 +348,17 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3"><span className={statusStyle(sale.status)}>{sale.status}</span></td>
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => setReceiptSale(sale)}>
-                          <Receipt className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </Button>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => setReceiptSale(sale)}>
+                            <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => openEditSale(sale)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0 text-destructive hover:text-destructive" onClick={() => removeSale(sale.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -290,14 +368,13 @@ export default function SalesExpenses() {
           </div>
         </TabsContent>
 
+        {/* EXPENSES TAB */}
         <TabsContent value="expenses" className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground hidden sm:block">Category:</span>
               <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
-                <SelectTrigger className="w-[140px] h-9 bg-card">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
+                <SelectTrigger className="w-[140px] h-9 bg-card"><SelectValue placeholder="All Categories" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Categories</SelectItem>
                   {expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -332,9 +409,17 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
                       <td className="px-4 py-3 text-right font-semibold text-destructive">{settings.currencySymbol}{expense.amount.toFixed(2)}</td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" className="h-8 group" onClick={() => setVoucherExpense(expense)}>
-                          <FileText className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </Button>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => setVoucherExpense(expense)}>
+                            <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => openEditExpense(expense)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0 text-destructive hover:text-destructive" onClick={() => removeExpense(expense.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -345,19 +430,21 @@ export default function SalesExpenses() {
         </TabsContent>
       </Tabs>
 
-      {/* Sale Dialog */}
+      {/* Sale Dialog (Add / Edit) */}
       <Dialog open={saleDialog} onOpenChange={setSaleDialog}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="font-display">Record New Sale</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{editingSale ? 'Edit Sale' : 'Record New Sale'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Customer</Label>
-                <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              {!editingSale && (
+                <div className="col-span-2 space-y-1">
+                  <Label>Customer</Label>
+                  <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label>Date</Label>
                 <Input type="date" value={saleForm.date} onChange={e => setSaleForm(f => ({ ...f, date: e.target.value }))} />
@@ -381,33 +468,42 @@ export default function SalesExpenses() {
                 </Select>
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2"><Label>Products</Label><Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add</Button></div>
-              <div className="space-y-2">
-                {saleForm.items.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Select value={item.productId} onValueChange={v => updateSaleItem(i, 'productId', v)}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
-                      <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Input type="number" min={1} value={item.qty} onChange={e => updateSaleItem(i, 'qty', +e.target.value)} className="w-20" />
-                    {saleForm.items.length > 1 && <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0"><X className="w-3 h-3" /></Button>}
-                  </div>
-                ))}
+            {!editingSale && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Products</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add</Button>
+                </div>
+                <div className="space-y-2">
+                  {saleForm.items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Select value={item.productId} onValueChange={v => updateSaleItem(i, 'productId', v)}>
+                        <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
+                        <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Input type="number" min={1} value={item.qty} onChange={e => updateSaleItem(i, 'qty', +e.target.value)} className="w-20" />
+                      {saleForm.items.length > 1 && (
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0">
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaleDialog(false)}>Cancel</Button>
-            <Button onClick={saveSale} className="bg-primary text-primary-foreground">Save Sale</Button>
+            <Button onClick={saveSale} className="bg-primary text-primary-foreground">{editingSale ? 'Save Changes' : 'Save Sale'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Expense Dialog */}
+      {/* Expense Dialog (Add / Edit) */}
       <Dialog open={expenseDialog} onOpenChange={setExpenseDialog}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="font-display">Add Expense</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{editingExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="space-y-1">
               <Label>Date</Label>
@@ -435,7 +531,7 @@ export default function SalesExpenses() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExpenseDialog(false)}>Cancel</Button>
-            <Button onClick={saveExpense} className="bg-primary text-primary-foreground">Save Expense</Button>
+            <Button onClick={saveExpense} className="bg-primary text-primary-foreground">{editingExpense ? 'Save Changes' : 'Save Expense'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

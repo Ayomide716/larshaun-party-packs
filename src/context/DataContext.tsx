@@ -21,7 +21,12 @@ interface DataContextType {
     updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
 
     addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
+    updateSale: (id: string, sale: Partial<Omit<Sale, 'id'>>) => Promise<void>;
+    deleteSale: (id: string) => Promise<void>;
+
     addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+    updateExpense: (id: string, expense: Partial<Omit<Expense, 'id'>>) => Promise<void>;
+    deleteExpense: (id: string) => Promise<void>;
 
     updateProductStock: (productId: string, deductedQty: number) => Promise<void>;
     updateCustomerStats: (customerId: string, amountSpent: number, date: string) => Promise<void>;
@@ -262,6 +267,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (data) setExpenses(prev => [data, ...prev]);
     };
 
+    const updateExpense = async (id: string, expense: Partial<Omit<Expense, 'id'>>) => {
+        const { error } = await supabase.from('expenses').update(expense).eq('id', id);
+        if (error) throw error;
+        setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
+    };
+
+    const deleteExpense = async (id: string) => {
+        const { error } = await supabase.from('expenses').delete().eq('id', id);
+        if (error) throw error;
+        setExpenses(prev => prev.filter(e => e.id !== id));
+    };
+
+    const updateSale = async (id: string, sale: Partial<Omit<Sale, 'id'>>) => {
+        const updates: any = { ...sale };
+        if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
+        if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
+        if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
+        delete updates.customerId;
+        delete updates.customerName;
+        delete updates.paymentMethod;
+        delete updates.products;
+        const { error } = await supabase.from('sales').update(updates).eq('id', id);
+        if (error) throw error;
+        setSales(prev => prev.map(s => s.id === id ? { ...s, ...sale } : s));
+    };
+
+    const deleteSale = async (id: string) => {
+        // Delete sale items first, then the sale
+        await supabase.from('sale_items').delete().eq('sale_id', id);
+        const { error } = await supabase.from('sales').delete().eq('id', id);
+        if (error) throw error;
+        setSales(prev => prev.filter(s => s.id !== id));
+    };
+
     const updateProductStock = async (productId: string, deductedQty: number) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
@@ -299,7 +338,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             products, customers, sales, expenses, isLoading, refreshData,
             addProduct, updateProduct, deleteProduct,
             addCustomer, updateCustomer,
-            addSale, addExpense,
+            addSale, updateSale, deleteSale,
+            addExpense, updateExpense, deleteExpense,
             updateProductStock, updateCustomerStats
         }}>
             {children}

@@ -16,7 +16,7 @@ import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonTableRow } from "@/components/SkeletonCard";
 
-const categories = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
+const DEFAULT_CATEGORIES = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
 const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers": "💧", "Kitchen Runners": "🏡", "Ceramic Vases": "🏺", "Scented Candles": "🕯️" };
 
 const emptyProduct: Omit<Product, 'id'> = { name: '', category: 'Scented Candles', sku: '', price: 0, cost: 0, stock: 0, minStock: 10, description: '', imageEmoji: '🕯️' };
@@ -28,7 +28,12 @@ export default function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, 'id'>>(emptyProduct);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
   const { setLowStockAlerts, settings } = useSettings();
+
+  // Derive all categories (defaults + any extra categories already in products)
+  const productCategories = Array.from(new Set(products.map(p => p.category)));
+  const allCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...productCategories]));
 
   // Sync low-stock alerts whenever products change
   useEffect(() => {
@@ -52,21 +57,36 @@ export default function Inventory() {
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const openAdd = () => { setEditing(null); setForm(emptyProduct); setDialogOpen(true); };
-  const openEdit = (p: Product) => { setEditing(p); setForm({ name: p.name, category: p.category, sku: p.sku, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, description: p.description, imageEmoji: p.imageEmoji }); setDialogOpen(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyProduct); setCustomCategoryInput(''); setDialogOpen(true); };
+  const openEdit = (p: Product) => {
+    setEditing(p);
+    setForm({ name: p.name, category: p.category, sku: p.sku, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, description: p.description, imageEmoji: p.imageEmoji });
+    setCustomCategoryInput('');
+    setDialogOpen(true);
+  };
+
+  const effectiveCategory = customCategoryInput.trim() || form.category;
 
   const save = async () => {
+    const finalCategory = customCategoryInput.trim() || form.category;
+    if (!form.name || !form.sku) {
+      toast.error("Product name and SKU are required");
+      return;
+    }
     try {
+      const payload = { ...form, category: finalCategory, imageEmoji: emojis[finalCategory] || '📦' };
       if (editing) {
-        await updateProduct(editing.id, { ...form, imageEmoji: emojis[form.category] || '📦' });
+        await updateProduct(editing.id, payload);
         toast.success("Product updated successfully");
       } else {
-        await addProduct({ ...form, imageEmoji: emojis[form.category] || '📦' });
+        await addProduct(payload);
         toast.success("Product added successfully");
       }
       setDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to save product");
+      setCustomCategoryInput('');
+    } catch (error: any) {
+      console.error("Save product error:", error);
+      toast.error(error?.message || "Failed to save product");
     }
   };
 
@@ -74,8 +94,9 @@ export default function Inventory() {
     try {
       await deleteProduct(id);
       toast.success("Product deleted");
-    } catch (error) {
-      toast.error("Failed to delete product");
+    } catch (error: any) {
+      console.error("Delete product error:", error);
+      toast.error(error?.message || "Failed to delete product");
     }
   };
 
@@ -162,9 +183,9 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary — only DEFAULT_CATEGORIES shown as filter tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {categories.map(cat => {
+        {DEFAULT_CATEGORIES.map(cat => {
           const count = products.filter(p => p.category === cat).length;
           return (
             <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? 'All' : cat)}
@@ -278,10 +299,30 @@ export default function Inventory() {
             </div>
             <div className="space-y-1">
               <Label>Category</Label>
-              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+              <Select
+                value={customCategoryInput ? '__custom__' : form.category}
+                onValueChange={v => {
+                  if (v === '__custom__') return;
+                  setCustomCategoryInput('');
+                  setForm(f => ({ ...f, category: v }));
+                }}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  <SelectItem value="__custom__">＋ Add new category…</SelectItem>
+                </SelectContent>
               </Select>
+              {/* Custom category input — visible when user types or selects "Add new" */}
+              <Input
+                className="mt-2"
+                placeholder="Type a new category name…"
+                value={customCategoryInput}
+                onChange={e => setCustomCategoryInput(e.target.value)}
+              />
+              {customCategoryInput.trim() && (
+                <p className="text-xs text-muted-foreground mt-1">Will save as: <strong>{customCategoryInput.trim()}</strong></p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Selling Price ({settings.currencySymbol})</Label>
