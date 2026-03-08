@@ -46,8 +46,15 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
 
   const handleDownloadPDF = () => {
     try {
-      const doc = new jsPDF({ unit: "pt", format: [360, 700] });
       const W = 360;
+      // Estimate height: header ~120, meta ~90, items variable, totals ~80, footer ~60
+      const itemsHeight = sale.products.reduce((h, p) => {
+        const lines = Math.ceil(p.productName.length / 20);
+        return h + (lines > 1 ? lines * 11 + 4 : 14);
+      }, 0);
+      const docHeight = 350 + itemsHeight + (hasTax ? 13 : 0);
+
+      const doc = new jsPDF({ unit: "pt", format: [W, docHeight] });
       const primaryColor: [number, number, number] = [148, 101, 74];
       const slateColor: [number, number, number] = [100, 116, 139];
       const darkColor: [number, number, number] = [30, 41, 59];
@@ -160,7 +167,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       y += 11;
       doc.text(bizName, W / 2, y, { align: "center" });
 
-      doc.internal.pageSize.height = y + 30;
       doc.save(`Receipt_${receiptLabel}.pdf`);
       toast.success("Receipt PDF downloaded!");
     } catch (err) {
