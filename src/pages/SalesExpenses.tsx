@@ -74,6 +74,7 @@ export default function SalesExpenses() {
       date: sale.date,
       paymentMethod: sale.paymentMethod,
       status: sale.status,
+      invoiceRef: sale.invoiceRef || '',
       items: sale.products.map(p => ({ productId: p.productId, productName: p.productName, qty: p.qty, price: p.price }))
     });
     setSaleDialog(true);
