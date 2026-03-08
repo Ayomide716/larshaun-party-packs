@@ -64,6 +64,16 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
+            <Label>Phone Number</Label>
+            <Input value={localPhone} onChange={e => setLocalPhone(e.target.value)} placeholder="e.g. 0707 519 4600" />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Business Email</Label>
+            <Input type="email" value={localEmail} onChange={e => setLocalEmail(e.target.value)} placeholder="e.g. hello@business.com" />
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Currency</Label>
             <Select
               value={settings.currency}
