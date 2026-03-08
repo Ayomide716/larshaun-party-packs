@@ -24,6 +24,8 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   const grandTotal = sale.total;
   const taxAmount = grandTotal - subtotal;
   const hasTax = taxAmount > 0.001;
+  // Back-calculate tax rate for display
+  const displayTaxRate = subtotal > 0 ? ((taxAmount / subtotal) * 100).toFixed(1) : settings.taxRate.toFixed(1);
 
   const captureReceipt = async (): Promise<HTMLCanvasElement | null> => {
     if (!receiptRef.current) return null;
