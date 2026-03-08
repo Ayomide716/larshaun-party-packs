@@ -219,6 +219,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!user) return;
         // 1. Insert sale — invoice_ref requires running supabase_invoice_ref_migration.sql first
         const salePayload: any = {
+            user_id: user.id,
             date: sale.date || null,
             customer_id: sale.customerId,
             customer_name: sale.customerName,
