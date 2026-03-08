@@ -58,19 +58,19 @@ export default function Inventory() {
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const openAdd = () => { setEditing(null); setForm(emptyProduct); setCustomCategoryInput(''); setDialogOpen(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyProduct); setShowNewCategory(false); setNewCategoryName(''); setDialogOpen(true); };
   const openEdit = (p: Product) => {
     setEditing(p);
     setForm({ name: p.name, category: p.category, sku: p.sku, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, description: p.description, imageEmoji: p.imageEmoji });
-    setCustomCategoryInput('');
+    setShowNewCategory(false);
+    setNewCategoryName('');
     setDialogOpen(true);
   };
 
   const save = async () => {
-    const finalCategory = customCategoryInput.trim() || form.category;
     if (!form.name || !form.sku) { toast.error("Product name and SKU are required"); return; }
     try {
-      const payload = { ...form, category: finalCategory, imageEmoji: emojis[finalCategory] || '📦' };
+      const payload = { ...form, imageEmoji: emojis[form.category] || '📦' };
       if (editing) {
         await updateProduct(editing.id, payload);
         toast.success("Product updated successfully");
@@ -79,7 +79,8 @@ export default function Inventory() {
         toast.success("Product added successfully");
       }
       setDialogOpen(false);
-      setCustomCategoryInput('');
+      setShowNewCategory(false);
+      setNewCategoryName('');
     } catch (error: any) {
       toast.error(error?.message || "Failed to save product");
     }
