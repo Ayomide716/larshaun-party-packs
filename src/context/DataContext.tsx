@@ -288,17 +288,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
         if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
         if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
-        // invoice_ref: only include if the column is available in schema
-        const hasInvoiceRef = sale.invoiceRef !== undefined;
-        if (hasInvoiceRef) updates.invoice_ref = sale.invoiceRef || null;
+        if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef || null;
         delete updates.customerId;
         delete updates.customerName;
         delete updates.paymentMethod;
         delete updates.invoiceRef;
         delete updates.products;
-        const dbUpdates = { ...updates };
-        if (!hasInvoiceRef) delete dbUpdates.invoice_ref;
-        const { error } = await supabase.from('sales').update(dbUpdates).eq('id', id);
+        const { error } = await supabase.from('sales').update(updates).eq('id', id);
         if (error) throw error;
 
         // If products are being updated, replace sale_items
