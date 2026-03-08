@@ -3,7 +3,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -27,7 +26,7 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const { signOut } = useAuth();
   const { settings } = useSettings();
   const collapsed = state === "collapsed";
@@ -36,13 +35,17 @@ export function AppSidebar() {
     try {
       await signOut();
       toast.success("Logged out successfully");
-    } catch (error) {
+    } catch {
       toast.error("Error logging out");
     }
   };
 
+  // Close mobile sheet after navigation
+  const handleNavClick = () => setOpenMobile(false);
+
   return (
     <Sidebar collapsible="icon">
+      {/* Brand */}
       <div className={cn("flex items-center py-5 border-b border-sidebar-border", collapsed ? "justify-center" : "gap-3 px-4")}>
         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <BookOpen className="w-4 h-4 text-primary-foreground" />
@@ -61,7 +64,11 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-widest mt-2">Navigation</SidebarGroupLabel>}
+          {!collapsed && (
+            <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-widest mt-2">
+              Navigation
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -70,6 +77,7 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
+                      onClick={handleNavClick}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       activeClassName="bg-primary/20 text-sidebar-primary font-medium"
                     >
@@ -90,6 +98,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <NavLink
                 to="/settings"
+                onClick={handleNavClick}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 activeClassName="bg-primary/20 text-sidebar-primary font-medium"
               >
