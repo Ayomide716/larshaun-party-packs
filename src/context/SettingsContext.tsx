@@ -42,6 +42,8 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   businessName: "Posh Homewares",
+  businessPhone: "0707 519 4600",
+  businessEmail: "poshomes@gmail.com",
   currency: "NGN",
   currencySymbol: "₦",
   taxRate: 8.5,
