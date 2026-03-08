@@ -44,7 +44,7 @@ export function AppSidebar() {
   const handleNavClick = () => setOpenMobile(false);
 
   return (
-    <Sidebar collapsible="offcanvas" className="md:collapsible-icon">
+    <Sidebar collapsible="icon">
       {/* Brand */}
       <div className={cn("flex items-center py-5 border-b border-sidebar-border", collapsed ? "justify-center" : "gap-3 px-4")}>
         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
