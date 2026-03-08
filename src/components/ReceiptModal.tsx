@@ -191,7 +191,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
             </div>
             {hasTax && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "6px" }}>
-                <span style={{ color: "#64748b" }}>Tax ({settings.taxRate > 0 ? `${settings.taxRate}%` : "incl."})</span>
+                <span style={{ color: "#64748b" }}>Tax ({displayTaxRate}%)</span>
                 <span>{settings.currencySymbol}{taxAmount.toFixed(2)}</span>
               </div>
             )}
