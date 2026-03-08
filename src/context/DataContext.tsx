@@ -290,6 +290,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         delete updates.products;
         const { error } = await supabase.from('sales').update(updates).eq('id', id);
         if (error) throw error;
+
+        // If products are being updated, replace sale_items
+        if (sale.products) {
+            await supabase.from('sale_items').delete().eq('sale_id', id);
+            const saleItems = sale.products.map(p => ({
+                sale_id: id,
+                product_id: p.productId,
+                product_name: p.productName,
+                qty: p.qty,
+                price: p.price
+            }));
+            const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
+            if (itemsError) throw itemsError;
+        }
+
         setSales(prev => prev.map(s => s.id === id ? { ...s, ...sale } : s));
     };
 
