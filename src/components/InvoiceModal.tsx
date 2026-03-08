@@ -15,7 +15,6 @@ interface InvoiceModalProps {
 
 export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
   const { settings } = useSettings();
-  const previewRef = useRef<HTMLDivElement>(null);
 
   if (!sale) return null;
 
