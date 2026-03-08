@@ -286,9 +286,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
         if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
         if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
+        if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef;
         delete updates.customerId;
         delete updates.customerName;
         delete updates.paymentMethod;
+        delete updates.invoiceRef;
         delete updates.products;
         const { error } = await supabase.from('sales').update(updates).eq('id', id);
         if (error) throw error;
