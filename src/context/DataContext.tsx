@@ -80,6 +80,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     customerId: s.customer_id,
                     customerName: s.customer_name,
                     paymentMethod: s.payment_method,
+                    invoiceRef: s.invoice_ref || undefined,
                     products: s.sale_items.map((si: any) => ({
                         productId: si.product_id,
                         productName: si.product_name,
@@ -226,7 +227,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             customer_name: sale.customerName,
             total: sale.total,
             status: sale.status,
-            payment_method: sale.paymentMethod
+            payment_method: sale.paymentMethod,
+            invoice_ref: sale.invoiceRef || null
         }).select().single();
 
         if (saleError) {
