@@ -22,7 +22,7 @@ import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
-const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
+const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], invoiceRef: '', items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
 const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
 
 export default function SalesExpenses() {
