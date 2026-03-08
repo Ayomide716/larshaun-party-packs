@@ -175,10 +175,12 @@ export default function SalesExpenses() {
     finally { setDeleteExpenseTarget(null); }
   };
 
+
   const statusStyle = (status: string) => cn("text-xs px-2 py-0.5 rounded-full font-medium",
-    status === 'completed' ? "bg-green-100 text-green-700" :
-      status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+    status === 'completed' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+      status === 'pending' ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" : "bg-destructive/10 text-destructive"
   );
+
 
   const handleExportSalesCSV = () => exportToCSV(filteredSales, `sales_export_${new Date().toISOString().split('T')[0]}`);
   const handleExportSalesPDF = () => exportToPDF(['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'], filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `${settings.currencySymbol}${s.total.toFixed(2)}`]), 'Sales Report', `sales_${new Date().toISOString().split('T')[0]}`);
