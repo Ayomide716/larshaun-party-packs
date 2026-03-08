@@ -69,18 +69,56 @@ export default function SalesExpenses() {
   const openAddSale = () => { setEditingSale(null); setSaleForm(emptySaleForm()); setSaleDialog(true); };
   const openEditSale = (sale: Sale) => {
     setEditingSale(sale);
-    setSaleForm({ customerId: sale.customerId, date: sale.date, paymentMethod: sale.paymentMethod, status: sale.status, items: sale.products.map(p => ({ productId: p.productId, qty: p.qty })) });
+    setSaleForm({
+      customerId: sale.customerId,
+      date: sale.date,
+      paymentMethod: sale.paymentMethod,
+      status: sale.status,
+      items: sale.products.map(p => ({ productId: p.productId, productName: p.productName, qty: p.qty, price: p.price }))
+    });
     setSaleDialog(true);
   };
-  const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', qty: 1 }] }));
+  const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', productName: '', qty: 1, price: 0 }] }));
   const removeSaleItem = (i: number) => setSaleForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
   const updateSaleItem = (i: number, field: string, value: string | number) =>
     setSaleForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
 
+  // When a product is selected in the edit/add form, auto-fill price and name
+  const selectSaleItemProduct = (i: number, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    setSaleForm(f => ({
+      ...f,
+      items: f.items.map((item, idx) =>
+        idx === i ? { ...item, productId: product.id, productName: product.name, price: product.price } : item
+      )
+    }));
+  };
+
+  // Derived totals for the sale form
+  const saleFormSubtotal = saleForm.items.reduce((s, i) => s + i.price * i.qty, 0);
+  const saleFormTax = saleFormSubtotal * (settings.taxRate / 100);
+  const saleFormTotal = saleFormSubtotal + saleFormTax;
+
   const saveSale = async () => {
     if (editingSale) {
+      const customer = customers.find(c => c.id === saleForm.customerId);
+      if (!customer) { toast.error("Please select a customer"); return; }
+      const validItems = saleForm.items.filter(i => i.productId);
+      if (validItems.length === 0) { toast.error('Add at least one product.'); return; }
+      const updatedItems = validItems.map(i => ({ productId: i.productId, productName: i.productName, qty: i.qty, price: i.price }));
+      const subtotal = updatedItems.reduce((s, i) => s + i.price * i.qty, 0);
+      const total = subtotal + subtotal * (settings.taxRate / 100);
       try {
-        await updateSale(editingSale.id, { date: saleForm.date, status: saleForm.status, paymentMethod: saleForm.paymentMethod });
+        await updateSale(editingSale.id, {
+          date: saleForm.date,
+          status: saleForm.status,
+          paymentMethod: saleForm.paymentMethod,
+          customerId: saleForm.customerId,
+          customerName: customer.name,
+          total,
+          products: updatedItems
+        });
         toast.success("Sale updated"); setSaleDialog(false);
       } catch (err: any) { toast.error(err?.message || "Failed to update sale"); }
       return;
