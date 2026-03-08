@@ -20,8 +20,10 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   if (!sale) return null;
 
   const subtotal = sale.products.reduce((s, p) => s + p.price * p.qty, 0);
-  const taxAmount = subtotal * (settings.taxRate / 100);
-  const total = subtotal + taxAmount;
+  // Use sale.total as source of truth (already includes tax when recorded)
+  const grandTotal = sale.total;
+  const taxAmount = grandTotal - subtotal;
+  const hasTax = taxAmount > 0.001;
 
   const captureReceipt = async (): Promise<HTMLCanvasElement | null> => {
     if (!receiptRef.current) return null;
