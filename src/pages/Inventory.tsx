@@ -29,7 +29,8 @@ export default function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, 'id'>>(emptyProduct);
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const { setLowStockAlerts, settings } = useSettings();
 
@@ -57,19 +58,19 @@ export default function Inventory() {
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const openAdd = () => { setEditing(null); setForm(emptyProduct); setCustomCategoryInput(''); setDialogOpen(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyProduct); setShowNewCategory(false); setNewCategoryName(''); setDialogOpen(true); };
   const openEdit = (p: Product) => {
     setEditing(p);
     setForm({ name: p.name, category: p.category, sku: p.sku, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, description: p.description, imageEmoji: p.imageEmoji });
-    setCustomCategoryInput('');
+    setShowNewCategory(false);
+    setNewCategoryName('');
     setDialogOpen(true);
   };
 
   const save = async () => {
-    const finalCategory = customCategoryInput.trim() || form.category;
     if (!form.name || !form.sku) { toast.error("Product name and SKU are required"); return; }
     try {
-      const payload = { ...form, category: finalCategory, imageEmoji: emojis[finalCategory] || '📦' };
+      const payload = { ...form, imageEmoji: emojis[form.category] || '📦' };
       if (editing) {
         await updateProduct(editing.id, payload);
         toast.success("Product updated successfully");
@@ -78,7 +79,8 @@ export default function Inventory() {
         toast.success("Product added successfully");
       }
       setDialogOpen(false);
-      setCustomCategoryInput('');
+      setShowNewCategory(false);
+      setNewCategoryName('');
     } catch (error: any) {
       toast.error(error?.message || "Failed to save product");
     }
@@ -261,15 +263,48 @@ export default function Inventory() {
             </div>
             <div className="space-y-1">
               <Label>Category</Label>
-              <Select value={customCategoryInput ? '__custom__' : form.category} onValueChange={v => { if (v === '__custom__') return; setCustomCategoryInput(''); setForm(f => ({ ...f, category: v })); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  <SelectItem value="__custom__">＋ Add new category…</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input className="mt-2" placeholder="Type a new category name…" value={customCategoryInput} onChange={e => setCustomCategoryInput(e.target.value)} />
-              {customCategoryInput.trim() && <p className="text-xs text-muted-foreground mt-1">Will save as: <strong>{customCategoryInput.trim()}</strong></p>}
+              {showNewCategory ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newCategoryName.trim()) {
+                        setForm(f => ({ ...f, category: newCategoryName.trim() }));
+                        setShowNewCategory(false);
+                        setNewCategoryName('');
+                      }
+                      if (e.key === 'Escape') { setShowNewCategory(false); setNewCategoryName(''); }
+                    }}
+                    placeholder="New category name"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button" size="sm"
+                    disabled={!newCategoryName.trim()}
+                    onClick={() => {
+                      if (!newCategoryName.trim()) return;
+                      setForm(f => ({ ...f, category: newCategoryName.trim() }));
+                      setShowNewCategory(false);
+                      setNewCategoryName('');
+                    }}
+                    className="bg-primary text-primary-foreground"
+                  >Add</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setShowNewCategory(false); setNewCategoryName(''); }}>✕</Button>
+                </div>
+              ) : (
+                <Select value={form.category} onValueChange={v => {
+                  if (v === '__custom__') { setShowNewCategory(true); }
+                  else { setForm(f => ({ ...f, category: v })); }
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    <SelectItem value="__custom__">＋ Add new category…</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Selling Price ({settings.currencySymbol})</Label>
