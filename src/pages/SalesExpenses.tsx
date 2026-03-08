@@ -381,6 +381,16 @@ export default function SalesExpenses() {
               </Select>
             </div>
 
+            {/* Invoice Reference */}
+            <div className="space-y-1">
+              <Label>Invoice Reference <span className="text-muted-foreground text-xs font-normal">(optional — auto-assigned if left blank)</span></Label>
+              <Input
+                value={saleForm.invoiceRef}
+                onChange={e => setSaleForm(f => ({ ...f, invoiceRef: e.target.value }))}
+                placeholder="e.g. INV-2024-001"
+              />
+            </div>
+
             {/* Date + Payment + Status */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
