@@ -214,12 +214,12 @@ export default function SalesExpenses() {
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-green-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
-          <p className="text-2xl font-display font-semibold text-green-700">{settings.currencySymbol}{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-emerald-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
+          <p className="text-2xl font-display font-semibold text-emerald-700 dark:text-emerald-400">{settings.currencySymbol}{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-red-500" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
-          <p className="text-2xl font-display font-semibold text-red-600">{settings.currencySymbol}{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
+          <p className="text-2xl font-display font-semibold text-destructive">{settings.currencySymbol}{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-xs text-muted-foreground">Net Profit</span></div>
