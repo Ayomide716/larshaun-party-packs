@@ -56,6 +56,106 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
     }
   };
 
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF({ unit: "pt", format: [360, 500] });
+      const W = 360;
+      const sym = settings.currencySymbol;
+      const slateColor: [number, number, number] = [100, 116, 139];
+      const darkColor: [number, number, number] = [30, 41, 59];
+      const accentColor: [number, number, number] = [148, 101, 74];
+
+      const drawDashedLine = (x1: number, y1: number, x2: number) => {
+        const segLen = 4; const gapLen = 3;
+        let x = x1; let drawing = true;
+        doc.setDrawColor(203, 213, 225);
+        while (x < x2) {
+          const endX = Math.min(x + (drawing ? segLen : gapLen), x2);
+          if (drawing) doc.line(x, y1, endX, y1);
+          x = endX; drawing = !drawing;
+        }
+      };
+
+      let y = 32;
+
+      // Business name
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...darkColor);
+      doc.text(settings.businessName, W / 2, y, { align: "center" });
+
+      y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...slateColor);
+      doc.text(settings.businessPhone || "0707 519 4600", W / 2, y, { align: "center" });
+      y += 11;
+      doc.text(settings.businessEmail || "poshomes@gmail.com", W / 2, y, { align: "center" });
+      y += 11;
+      doc.text("Expense Voucher", W / 2, y, { align: "center" });
+
+      // Category badge area
+      y += 18;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...accentColor);
+      doc.text(expense.category.toUpperCase(), W / 2, y, { align: "center" });
+
+      y += 14;
+      drawDashedLine(20, y, W - 20);
+      y += 14;
+
+      const rows: [string, string][] = [
+        ["Voucher No.", `#${voucherLabel}`],
+        ["Date", expense.date],
+        ["Vendor", expense.vendor || "—"],
+        ["Description", expense.description],
+      ];
+
+      rows.forEach(([label, value]) => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...slateColor);
+        doc.text(label, 20, y);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...darkColor);
+        const lines = doc.splitTextToSize(value, 180);
+        doc.text(lines, W - 20, y, { align: "right" });
+        y += lines.length > 1 ? lines.length * 12 + 2 : 14;
+      });
+
+      y += 4;
+      drawDashedLine(20, y, W - 20);
+      y += 14;
+
+      // Total
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...slateColor);
+      doc.text("Total Amount", 20, y);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(...accentColor);
+      doc.text(`${sym}${expense.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, W - 20, y, { align: "right" });
+
+      // Footer
+      y += 30;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Authorised expense record", W / 2, y, { align: "center" });
+      y += 11;
+      doc.text(`${settings.businessName} · Internal Finance Document`, W / 2, y, { align: "center" });
+
+      doc.internal.pageSize.height = y + 30;
+      doc.save(`Expense_${voucherLabel}.pdf`);
+      toast.success("PDF downloaded!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
   const handleDownload = async () => {
     try {
       const canvas = await captureVoucher();
@@ -80,8 +180,11 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
               <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5 text-xs">
                 <Printer className="w-3.5 h-3.5" /> Print
               </Button>
+              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </Button>
               <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> Save Image
+                <Download className="w-3.5 h-3.5" /> Image
               </Button>
             </div>
           </div>
