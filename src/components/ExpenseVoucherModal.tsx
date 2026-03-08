@@ -29,7 +29,7 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
   if (!expense) return null;
 
   const catColor = categoryColors[expense.category] ?? "#475569";
-  const voucherLabel = expense.voucherRef || expense.id?.toUpperCase().slice(0, 8) ?? "EXP";
+  const voucherLabel = expense.voucherRef || (expense.id?.toUpperCase().slice(0, 8) ?? "EXP");
 
   const captureVoucher = async (): Promise<HTMLCanvasElement | null> => {
     if (!voucherRef.current) return null;
