@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export interface Settings {
   businessName: string;
+  businessPhone: string;
+  businessEmail: string;
   currency: string;
   currencySymbol: string;
   taxRate: number;
