@@ -5,6 +5,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard, Edit2, Trash2 } from "lucide-react";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { InvoiceModal } from "@/components/InvoiceModal";
 import { ExpenseVoucherModal } from "@/components/ExpenseVoucherModal";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
