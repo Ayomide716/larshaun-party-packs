@@ -104,9 +104,9 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       // Dashed separator
       y += 14;
       doc.setDrawColor(203, 213, 225);
-      doc.setLineDash([3, 3], 0);
+      (doc as any).setLineDash([3, 3], 0);
       doc.line(20, y, W - 20, y);
-      doc.setLineDash([], 0);
+      (doc as any).setLineDash([], 0);
 
       // Meta rows
       const metaRows: [string, string][] = [
@@ -132,9 +132,9 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       // Dashed separator
       y += 4;
       doc.setDrawColor(203, 213, 225);
-      doc.setLineDash([3, 3], 0);
+      (doc as any).setLineDash([3, 3], 0);
       doc.line(20, y, W - 20, y);
-      doc.setLineDash([], 0);
+      (doc as any).setLineDash([], 0);
       y += 12;
 
       // Items header
