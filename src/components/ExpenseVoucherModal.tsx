@@ -45,17 +45,13 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
     try {
       const canvas = await captureVoucher();
       if (!canvas) return;
-      const imgData = canvas.toDataURL("image/png");
-      const win = window.open("", "_blank");
-      if (!win) { toast.error("Pop-up blocked. Allow pop-ups and try again."); return; }
-      win.document.write(`
-        <html><head><title>Expense Voucher – ${voucherLabel}</title>
-        <style>body{margin:0;display:flex;justify-content:center;background:#f1f5f9}img{max-width:420px;width:100%;display:block}</style>
-        </head><body><img src="${imgData}" onload="window.print();window.close()" /></body></html>
-      `);
-      win.document.close();
+      const link = document.createElement("a");
+      link.download = `Expense_${voucherLabel}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      toast.success("Voucher downloaded!");
     } catch {
-      toast.error("Failed to print voucher");
+      toast.error("Failed to download voucher");
     }
   };
 
@@ -123,7 +119,13 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
               <div style={{ fontSize: "18px", fontWeight: "700", letterSpacing: "0.5px" }}>
                 {settings.businessName}
               </div>
-              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>Expense Voucher</div>
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                {settings.businessPhone || "0707 519 4600"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
+                {settings.businessEmail || "poshomes@gmail.com"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px", letterSpacing: "0.5px" }}>Expense Voucher</div>
             </div>
 
             {/* Category badge */}
