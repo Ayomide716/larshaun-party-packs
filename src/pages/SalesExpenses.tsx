@@ -332,6 +332,7 @@ export default function SalesExpenses() {
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Voucher No.</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
@@ -345,6 +346,7 @@ export default function SalesExpenses() {
                   ) : filteredExpenses.map(expense => (
                     <tr key={expense.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-muted-foreground">{expense.date}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{expense.voucherRef || expense.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
