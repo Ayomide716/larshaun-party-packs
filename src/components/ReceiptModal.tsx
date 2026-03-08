@@ -238,7 +238,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-lg">Receipt Preview</DialogTitle>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5 text-xs">
+              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
                 <Printer className="w-3.5 h-3.5" /> Print
               </Button>
               <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
