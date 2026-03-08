@@ -285,12 +285,12 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
               <div style={{ fontSize: "18px", fontWeight: "700", letterSpacing: "0.5px", color: "#1e293b" }}>
                 {settings.businessName}
               </div>
-              {settings.businessPhone && (
-                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>{settings.businessPhone}</div>
-              )}
-              {settings.businessEmail && (
-                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>{settings.businessEmail}</div>
-              )}
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                {settings.businessPhone || "0707 519 4600"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
+                {settings.businessEmail || "poshomes@gmail.com"}
+              </div>
               <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px", letterSpacing: "0.5px" }}>Sales Receipt</div>
             </div>
 
