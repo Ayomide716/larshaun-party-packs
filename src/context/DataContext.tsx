@@ -218,19 +218,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addSale = async (sale: Omit<Sale, 'id'>) => {
         if (!user) return;
         // 1. Insert sale
-        const insertPayload: any = {
+        const { data: saleData, error: saleError } = await supabase.from('sales').insert({
             date: sale.date || null,
             customer_id: sale.customerId,
             customer_name: sale.customerName,
             total: sale.total,
             status: sale.status,
             payment_method: sale.paymentMethod,
-        };
-        // Only include invoice_ref if the column exists in the schema
-        if (sale.invoiceRef !== undefined) {
-            try { insertPayload.invoice_ref = sale.invoiceRef || null; } catch { /* column may not exist */ }
-        }
-        const { data: saleData, error: saleError } = await supabase.from('sales').insert(insertPayload).select().single();
+            // invoice_ref column — add via migration if not present:
+            // ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_ref text;
+            invoice_ref: sale.invoiceRef || null
+        }).select().single();
 
         if (saleError) {
             console.error("Error adding sale:", saleError);
