@@ -30,6 +30,7 @@ export type Expense = {
   description: string;
   amount: number;
   vendor: string;
+  voucherRef?: string;
 };
 
 export type Customer = {

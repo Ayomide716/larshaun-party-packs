@@ -23,7 +23,7 @@ const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
 const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], invoiceRef: '', items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
-const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
+const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '', voucherRef: '' });
 
 export default function SalesExpenses() {
   const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
@@ -160,7 +160,7 @@ export default function SalesExpenses() {
   const openAddExpense = () => { setEditingExpense(null); setExpenseForm(emptyExpenseForm()); setExpenseDialog(true); };
   const openEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
-    setExpenseForm({ date: expense.date, category: expense.category, description: expense.description, amount: expense.amount, vendor: expense.vendor });
+    setExpenseForm({ date: expense.date, category: expense.category, description: expense.description, amount: expense.amount, vendor: expense.vendor, voucherRef: expense.voucherRef || '' });
     setExpenseDialog(true);
   };
   const saveExpense = async () => {
@@ -328,10 +328,11 @@ export default function SalesExpenses() {
           </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[560px]">
+              <table className="w-full text-sm min-w-[680px]">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Voucher No.</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
@@ -345,6 +346,7 @@ export default function SalesExpenses() {
                   ) : filteredExpenses.map(expense => (
                     <tr key={expense.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-muted-foreground">{expense.date}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{expense.voucherRef || expense.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3"><span className="px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs">{expense.category}</span></td>
                       <td className="px-4 py-3 font-medium">{expense.description}</td>
                       <td className="px-4 py-3 text-muted-foreground">{expense.vendor}</td>
@@ -496,6 +498,10 @@ export default function SalesExpenses() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label>Voucher Reference <span className="text-muted-foreground text-xs font-normal">(optional — auto-assigned if left blank)</span></Label>
+              <Input value={expenseForm.voucherRef} onChange={e => setExpenseForm(f => ({ ...f, voucherRef: e.target.value }))} placeholder="e.g. EXP-2024-001" />
             </div>
             <div className="col-span-2 space-y-1">
               <Label>Description</Label>

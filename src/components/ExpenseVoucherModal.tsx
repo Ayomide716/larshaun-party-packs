@@ -29,6 +29,7 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
   if (!expense) return null;
 
   const catColor = categoryColors[expense.category] ?? "#475569";
+  const voucherLabel = expense.voucherRef || (expense.id?.toUpperCase().slice(0, 8) ?? "EXP");
 
   const captureVoucher = async (): Promise<HTMLCanvasElement | null> => {
     if (!voucherRef.current) return null;
@@ -48,7 +49,7 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       const win = window.open("", "_blank");
       if (!win) { toast.error("Pop-up blocked. Allow pop-ups and try again."); return; }
       win.document.write(`
-        <html><head><title>Expense Voucher – ${expense.id?.toUpperCase().slice(0, 8) ?? "EXP"}</title>
+        <html><head><title>Expense Voucher – ${voucherLabel}</title>
         <style>body{margin:0;display:flex;justify-content:center;background:#f1f5f9}img{max-width:420px;width:100%;display:block}</style>
         </head><body><img src="${imgData}" onload="window.print();window.close()" /></body></html>
       `);
@@ -63,7 +64,7 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       const canvas = await captureVoucher();
       if (!canvas) return;
       const link = document.createElement("a");
-      link.download = `Expense_${expense.id?.toUpperCase().slice(0, 8) ?? "EXP"}.png`;
+      link.download = `Expense_${voucherLabel}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success("Voucher downloaded!");
@@ -144,7 +145,7 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
 
             {/* Meta rows */}
             {[
-              ["Voucher No.", `#${expense.id?.toUpperCase().slice(0, 8) ?? "—"}`],
+              ["Voucher No.", `#${voucherLabel}`],
               ["Date", expense.date],
               ["Vendor", expense.vendor || "—"],
               ["Description", expense.description],

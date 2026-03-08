@@ -66,7 +66,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
             // Fetch Expenses
             const { data: expensesData } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-            if (expensesData) setExpenses(expensesData);
+            if (expensesData) setExpenses(expensesData.map(e => ({ ...e, voucherRef: e.voucher_ref || undefined })));
 
             // Fetch Sales with items
             const { data: salesData } = await supabase
@@ -255,18 +255,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!user) return;
         const { data, error } = await supabase.from('expenses').insert({
             ...expense,
-            date: expense.date || null
+            date: expense.date || null,
+            voucher_ref: expense.voucherRef || null
         }).select().single();
 
         if (error) {
             console.error("Error adding expense:", error);
             throw error;
         }
-        if (data) setExpenses(prev => [data, ...prev]);
+        if (data) setExpenses(prev => [{ ...data, voucherRef: data.voucher_ref || undefined }, ...prev]);
     };
 
     const updateExpense = async (id: string, expense: Partial<Omit<Expense, 'id'>>) => {
-        const { error } = await supabase.from('expenses').update(expense).eq('id', id);
+        const updates: any = { ...expense };
+        if (expense.voucherRef !== undefined) updates.voucher_ref = expense.voucherRef || null;
+        delete updates.voucherRef;
+        const { error } = await supabase.from('expenses').update(updates).eq('id', id);
         if (error) throw error;
         setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
     };
