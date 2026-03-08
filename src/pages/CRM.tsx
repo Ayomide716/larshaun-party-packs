@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import type { Customer } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
-import { Plus, Search, Mail, Phone, MapPin, Star, TrendingUp, Edit2, X, Users } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Edit2, X, Users, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,8 @@ const segmentColors: Record<string, string> = {
 };
 
 const emptyCustomer: Omit<Customer, 'id'> = {
-  name: '', email: '', phone: '', address: '', joinDate: new Date().toISOString().split('T')[0],
+  name: '', email: '', phone: '', address: '',
+  joinDate: new Date().toISOString().split('T')[0],
   totalPurchases: 0, totalSpent: 0, lastPurchase: '', segment: 'New', notes: '',
 };
 
@@ -48,108 +49,88 @@ export default function CRM() {
   const customerSales = selected ? sales.filter(s => s.customerId === selected.id) : [];
 
   const openAdd = () => { setEditingCustomer(null); setForm(emptyCustomer); setDialogOpen(true); };
-  const openEdit = (c: Customer) => { setEditingCustomer(c); setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, joinDate: c.joinDate, totalPurchases: c.totalPurchases, totalSpent: c.totalSpent, lastPurchase: c.lastPurchase, segment: c.segment, notes: c.notes }); setDialogOpen(true); };
+  const openEdit = (c: Customer) => {
+    setEditingCustomer(c);
+    setForm({ name: c.name, email: c.email, phone: c.phone, address: c.address, joinDate: c.joinDate, totalPurchases: c.totalPurchases, totalSpent: c.totalSpent, lastPurchase: c.lastPurchase, segment: c.segment, notes: c.notes });
+    setDialogOpen(true);
+  };
 
   const save = async () => {
     try {
-      if (editingCustomer) {
-        await updateCustomer(editingCustomer.id, form);
-        toast.success("Customer updated");
-      } else {
-        await addCustomer(form);
-        toast.success("Customer added");
-      }
+      if (editingCustomer) { await updateCustomer(editingCustomer.id, form); toast.success("Customer updated"); }
+      else { await addCustomer(form); toast.success("Customer added"); }
       setDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to save customer");
-    }
+    } catch { toast.error("Failed to save customer"); }
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(customers, `customers_export_${new Date().toISOString().split('T')[0]}`);
-  };
-
+  const handleExportCSV = () => exportToCSV(customers, `customers_export_${new Date().toISOString().split('T')[0]}`);
   const handleExportPDF = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Segment', 'Total Spent', 'Orders'];
-    const data = customers.map(c => [
-      c.name,
-      c.email,
-      c.phone,
-      c.segment,
-      `${settings.currency} ${c.totalSpent.toFixed(2)}`,
-      c.totalPurchases.toString()
-    ]);
-    exportToPDF(headers, data, 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
+    exportToPDF(['Name', 'Email', 'Phone', 'Segment', 'Total Spent', 'Orders'], customers.map(c => [c.name, c.email, c.phone, c.segment, `${settings.currency} ${c.totalSpent.toFixed(2)}`, c.totalPurchases.toString()]), 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
   };
-
   const handleImportCSV = async (importedData: any[]) => {
     try {
       for (const c of importedData) {
         if (c.name && c.email) {
-          await addCustomer({
-            name: c.name,
-            email: c.email,
-            phone: c.phone || '',
-            address: c.address || '',
-            joinDate: c.joinDate || new Date().toISOString().split('T')[0],
-            totalPurchases: parseInt(c.totalPurchases) || 0,
-            totalSpent: parseFloat(c.totalSpent) || 0,
-            lastPurchase: c.lastPurchase || '',
-            segment: (c.segment as Customer['segment']) || 'New',
-            notes: c.notes || ''
-          });
+          await addCustomer({ name: c.name, email: c.email, phone: c.phone || '', address: c.address || '', joinDate: c.joinDate || new Date().toISOString().split('T')[0], totalPurchases: parseInt(c.totalPurchases) || 0, totalSpent: parseFloat(c.totalSpent) || 0, lastPurchase: c.lastPurchase || '', segment: (c.segment as Customer['segment']) || 'New', notes: c.notes || '' });
         }
       }
       toast.success("Import completed");
-    } catch (error) {
-      toast.error("Import failed partially");
-    }
+    } catch { toast.error("Import failed partially"); }
   };
 
   const segmentCounts = { VIP: customers.filter(c => c.segment === 'VIP').length, Regular: customers.filter(c => c.segment === 'Regular').length, New: customers.filter(c => c.segment === 'New').length, "At Risk": customers.filter(c => c.segment === 'At Risk').length };
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="grid grid-cols-4 gap-3">
-          {[0,1,2,3].map(i => <SkeletonStatCard key={i} />)}
-        </div>
-        <div className="space-y-3">
-          {[0,1,2,3].map(i => <div key={i} className="bg-muted animate-pulse rounded-xl h-20" />)}
-        </div>
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[0,1,2,3].map(i => <SkeletonStatCard key={i} />)}</div>
+        <div className="space-y-3">{[0,1,2,3].map(i => <div key={i} className="bg-muted animate-pulse rounded-xl h-20" />)}</div>
       </div>
     );
   }
 
+  // On mobile, when a customer is selected show the detail panel full-screen
+  const showDetailMobile = !!selected;
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:justify-between">
         <div>
-          <h1 className="text-3xl font-display font-semibold text-foreground">Customer CRM</h1>
-          <p className="text-muted-foreground mt-1">{customers.length} customers · {settings.currencySymbol}{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-semibold text-foreground">Customer CRM</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{customers.length} customers · {settings.currencySymbol}{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
         </div>
-        <div className="flex gap-2">
-          <ImportButton
-            onImport={handleImportCSV}
-            expectedHeaders={['name', 'email', 'phone']}
-          />
+        <div className="flex flex-wrap gap-2">
+          <ImportButton onImport={handleImportCSV} expectedHeaders={['name', 'email', 'phone']} />
           <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
-          <Button onClick={openAdd} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
+          <Button onClick={openAdd} className="bg-primary text-primary-foreground" size="sm"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
         </div>
       </div>
 
-      {/* Segment Summary */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* Segment tiles — 2 cols on mobile, 4 on sm+ */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {(Object.entries(segmentCounts) as [string, number][]).map(([seg, count]) => (
           <button key={seg} onClick={() => setSegmentFilter(segmentFilter === seg ? 'All' : seg)}
-            className={cn("bg-card border rounded-xl p-4 text-left transition-all hover:shadow-md", segmentFilter === seg ? "border-primary bg-primary/5" : "border-border")}>
-            <p className="text-2xl font-display font-semibold">{count}</p>
+            className={cn("bg-card border rounded-xl p-3 sm:p-4 text-left transition-all hover:shadow-md", segmentFilter === seg ? "border-primary bg-primary/5" : "border-border")}>
+            <p className="text-xl sm:text-2xl font-display font-semibold">{count}</p>
             <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block", segmentColors[seg])}>{seg}</span>
           </button>
         ))}
       </div>
 
-      <div className="flex gap-4">
+      {/* Mobile: show detail panel as overlay when selected */}
+      {showDetailMobile && (
+        <div className="sm:hidden bg-card rounded-2xl border border-border shadow-[var(--shadow-elevated)] p-4">
+          {/* Back button */}
+          <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-3 -ml-1 text-muted-foreground">
+            <ChevronLeft className="w-4 h-4 mr-1" />Back to list
+          </Button>
+          <CustomerDetail selected={selected!} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onClose={() => setSelectedId(null)} />
+        </div>
+      )}
+
+      {/* Main layout: list + sidebar on sm+ */}
+      <div className={cn("flex gap-4", showDetailMobile && "hidden sm:flex")}>
         {/* Customer List */}
         <div className="flex-1 min-w-0">
           <div className="relative mb-3">
@@ -161,15 +142,15 @@ export default function CRM() {
               <EmptyState icon={Users} title="No customers found" description={search ? "Try a different search term." : "Add your first customer to get started."} actionLabel="Add Customer" onAction={openAdd} />
             ) : filtered.map(c => (
               <div key={c.id} onClick={() => setSelectedId(c.id === selectedId ? null : c.id)}
-                className={cn("bg-card border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all", selectedId === c.id ? "border-primary bg-primary/5" : "border-border")}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">
+                className={cn("bg-card border rounded-xl p-3 sm:p-4 cursor-pointer hover:shadow-md transition-all", selectedId === c.id ? "border-primary bg-primary/5" : "border-border")}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">
                       {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">{c.email}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{c.email}</p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -183,74 +164,19 @@ export default function CRM() {
           </div>
         </div>
 
-        {/* Customer Detail */}
+        {/* Customer Detail — sidebar on sm+, hidden on mobile (shown above instead) */}
         {selected && (
-          <div className="w-80 flex-shrink-0">
+          <div className="hidden sm:block w-72 lg:w-80 flex-shrink-0">
             <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-elevated)] p-5 sticky top-20">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-semibold">
-                    {selected.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <p className="font-display font-semibold text-foreground">{selected.name}</p>
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", segmentColors[selected.segment])}>{selected.segment}</span>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(selected)} className="w-7 h-7 p-0"><Edit2 className="w-3.5 h-3.5" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)} className="w-7 h-7 p-0"><X className="w-3.5 h-3.5" /></Button>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-3.5 h-3.5" />{selected.email}</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-3.5 h-3.5" />{selected.phone}</div>
-                <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-3.5 h-3.5" /><span className="text-xs">{selected.address}</span></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-xl font-display font-semibold">{selected.totalPurchases}</p>
-                  <p className="text-xs text-muted-foreground">Orders</p>
-                </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <p className="text-lg font-display font-semibold">{settings.currencySymbol}{selected.totalSpent.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Lifetime</p>
-                </div>
-              </div>
-
-              {selected.notes && (
-                <div className="mt-4 p-3 bg-accent rounded-lg">
-                  <p className="text-xs font-medium text-accent-foreground mb-1">Notes</p>
-                  <p className="text-xs text-muted-foreground">{selected.notes}</p>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Purchase History</p>
-                <div className="space-y-2 max-h-52 overflow-y-auto">
-                  {customerSales.length > 0 ? customerSales.map(s => (
-                    <div key={s.id} className="flex justify-between items-center text-xs py-1.5 border-b border-border last:border-0">
-                      <div>
-                        <p className="font-medium">{s.date}</p>
-                        <p className="text-muted-foreground">{s.products.length} item{s.products.length > 1 ? 's' : ''}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{settings.currencySymbol}{s.total.toFixed(2)}</p>
-                        <span className={cn("px-1.5 py-0.5 rounded-full", s.status === 'completed' ? "bg-green-100 text-green-700" : s.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>{s.status}</span>
-                      </div>
-                    </div>
-                  )) : <p className="text-xs text-muted-foreground text-center py-2">No purchase history</p>}
-                </div>
-              </div>
+              <CustomerDetail selected={selected} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onClose={() => setSelectedId(null)} />
             </div>
           </div>
         )}
       </div>
 
+      {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-full max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="col-span-2 space-y-1"><Label>Full Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
@@ -266,12 +192,80 @@ export default function CRM() {
             </div>
             <div className="col-span-2 space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3} /></div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={save} className="bg-primary text-primary-foreground">{editingCustomer ? 'Save Changes' : 'Add Customer'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Extracted detail panel to avoid duplication between mobile/desktop renders
+function CustomerDetail({ selected, customerSales, settings, segmentColors, onEdit, onClose }: {
+  selected: Customer;
+  customerSales: any[];
+  settings: any;
+  segmentColors: Record<string, string>;
+  onEdit: (c: Customer) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-semibold">
+            {selected.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          </div>
+          <div>
+            <p className="font-display font-semibold text-foreground">{selected.name}</p>
+            <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", segmentColors[selected.segment])}>{selected.segment}</span>
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <Button size="sm" variant="ghost" onClick={() => onEdit(selected)} className="w-7 h-7 p-0"><Edit2 className="w-3.5 h-3.5" /></Button>
+          <Button size="sm" variant="ghost" onClick={onClose} className="w-7 h-7 p-0 hidden sm:flex"><X className="w-3.5 h-3.5" /></Button>
+        </div>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground"><Mail className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">{selected.email}</span></div>
+        <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-3.5 h-3.5 flex-shrink-0" />{selected.phone}</div>
+        <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-3.5 h-3.5 flex-shrink-0" /><span className="text-xs">{selected.address}</span></div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="bg-muted rounded-lg p-3 text-center">
+          <p className="text-xl font-display font-semibold">{selected.totalPurchases}</p>
+          <p className="text-xs text-muted-foreground">Orders</p>
+        </div>
+        <div className="bg-muted rounded-lg p-3 text-center">
+          <p className="text-lg font-display font-semibold">{settings.currencySymbol}{selected.totalSpent.toFixed(0)}</p>
+          <p className="text-xs text-muted-foreground">Lifetime</p>
+        </div>
+      </div>
+      {selected.notes && (
+        <div className="mt-4 p-3 bg-accent rounded-lg">
+          <p className="text-xs font-medium text-accent-foreground mb-1">Notes</p>
+          <p className="text-xs text-muted-foreground">{selected.notes}</p>
+        </div>
+      )}
+      <div className="mt-4">
+        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Purchase History</p>
+        <div className="space-y-2 max-h-52 overflow-y-auto">
+          {customerSales.length > 0 ? customerSales.map(s => (
+            <div key={s.id} className="flex justify-between items-center text-xs py-1.5 border-b border-border last:border-0">
+              <div>
+                <p className="font-medium">{s.date}</p>
+                <p className="text-muted-foreground">{s.products.length} item{s.products.length > 1 ? 's' : ''}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">{settings.currencySymbol}{s.total.toFixed(2)}</p>
+                <span className={cn("px-1.5 py-0.5 rounded-full", s.status === 'completed' ? "bg-green-100 text-green-700" : s.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>{s.status}</span>
+              </div>
+            </div>
+          )) : <p className="text-xs text-muted-foreground text-center py-2">No purchase history</p>}
+        </div>
+      </div>
+    </>
   );
 }
