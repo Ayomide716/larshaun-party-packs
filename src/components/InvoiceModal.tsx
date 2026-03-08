@@ -1,10 +1,9 @@
 import { useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import html2canvas from "html2canvas";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { Sale } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";

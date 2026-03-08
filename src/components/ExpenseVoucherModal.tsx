@@ -1,9 +1,8 @@
 import { useRef } from "react";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { Expense } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
