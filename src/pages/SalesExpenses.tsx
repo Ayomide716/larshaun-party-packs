@@ -118,6 +118,7 @@ export default function SalesExpenses() {
           customerId: saleForm.customerId,
           customerName: customer.name,
           total,
+          invoiceRef: saleForm.invoiceRef || undefined,
           products: updatedItems
         });
         toast.success("Sale updated"); setSaleDialog(false);
@@ -138,7 +139,7 @@ export default function SalesExpenses() {
     const subtotal = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
     const total = subtotal + subtotal * (settings.taxRate / 100);
     try {
-      await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod });
+      await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod, invoiceRef: saleForm.invoiceRef || undefined });
       if (saleForm.status === 'completed') {
         for (const i of saleItems) await updateProductStock(i.productId, i.qty);
         await updateCustomerStats(customer.id, total, saleForm.date);
