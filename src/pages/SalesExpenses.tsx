@@ -364,18 +364,21 @@ export default function SalesExpenses() {
       {/* Sale Dialog */}
       <Dialog open={saleDialog} onOpenChange={setSaleDialog}>
         <DialogContent className="w-full max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-display">{editingSale ? 'Edit Sale' : 'Record New Sale'}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="font-display">{editingSale ? 'Edit Sale' : 'Record New Sale'}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {!editingSale && (
-                <div className="col-span-1 sm:col-span-2 space-y-1">
-                  <Label>Customer</Label>
-                  <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                    <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
+            {/* Customer */}
+            <div className="space-y-1">
+              <Label>Customer</Label>
+              <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            {/* Date + Payment + Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label>Date</Label>
                 <Input type="date" value={saleForm.date} onChange={e => setSaleForm(f => ({ ...f, date: e.target.value }))} />
@@ -399,23 +402,60 @@ export default function SalesExpenses() {
                 </Select>
               </div>
             </div>
-            {!editingSale && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Products</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add</Button>
-                </div>
-                <div className="space-y-2">
-                  {saleForm.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Select value={item.productId} onValueChange={v => updateSaleItem(i, 'productId', v)}>
-                        <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
-                        <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Input type="number" min={1} value={item.qty} onChange={e => updateSaleItem(i, 'qty', +e.target.value)} className="w-20" />
-                      {saleForm.items.length > 1 && <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0"><X className="w-3 h-3" /></Button>}
+
+            {/* Products */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Products</Label>
+                <Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add Item</Button>
+              </div>
+              <div className="space-y-2">
+                {saleForm.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Select value={item.productId} onValueChange={v => selectSaleItemProduct(i, v)}>
+                      <SelectTrigger className="flex-1 min-w-0"><SelectValue placeholder="Select product" /></SelectTrigger>
+                      <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number" min={1} value={item.qty}
+                        onChange={e => updateSaleItem(i, 'qty', Math.max(1, +e.target.value))}
+                        className="w-16 text-center"
+                        placeholder="Qty"
+                      />
+                      <Input
+                        type="number" min={0} step="0.01" value={item.price || ''}
+                        onChange={e => updateSaleItem(i, 'price', +e.target.value)}
+                        className="w-24"
+                        placeholder="Price"
+                      />
                     </div>
-                  ))}
+                    {saleForm.items.length > 1 && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0 shrink-0">
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            {saleFormSubtotal > 0 && (
+              <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm space-y-1">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{settings.currencySymbol}{saleFormSubtotal.toFixed(2)}</span>
+                </div>
+                {settings.taxRate > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Tax ({settings.taxRate}%)</span>
+                    <span>{settings.currencySymbol}{saleFormTax.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1 mt-1">
+                  <span>Total</span>
+                  <span>{settings.currencySymbol}{saleFormTotal.toFixed(2)}</span>
                 </div>
               </div>
             )}
