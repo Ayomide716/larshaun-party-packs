@@ -49,8 +49,18 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
 
   const handleDownloadPDF = () => {
     try {
-      const doc = new jsPDF({ unit: "pt", format: [360, 560] });
       const W = 360;
+      // Pre-calculate approximate height
+      const estimatedRows = [
+        expense.vendor || "—",
+        expense.description,
+      ].reduce((h, v) => {
+        const lines = Math.ceil(v.length / 30);
+        return h + (lines > 1 ? lines * 12 + 4 : 15);
+      }, 0);
+      const docHeight = 320 + estimatedRows;
+
+      const doc = new jsPDF({ unit: "pt", format: [W, docHeight] });
       const slateColor: [number, number, number] = [100, 116, 139];
       const darkColor: [number, number, number] = [30, 41, 59];
       const accentColor: [number, number, number] = [148, 101, 74];
@@ -127,7 +137,6 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
       y += 11;
       doc.text(`${bizName} · Internal Finance Document`, W / 2, y, { align: "center" });
 
-      doc.internal.pageSize.height = y + 30;
       doc.save(`Voucher_${voucherLabel}.pdf`);
       toast.success("Voucher PDF downloaded!");
     } catch (err) {
