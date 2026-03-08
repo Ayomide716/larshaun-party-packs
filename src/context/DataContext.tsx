@@ -309,18 +309,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateSale = async (id: string, sale: Partial<Omit<Sale, 'id'>>) => {
-        const updates: any = { ...sale };
+        const updates: any = {};
+        if (sale.date !== undefined) updates.date = sale.date || null;
+        if (sale.total !== undefined) updates.total = sale.total;
+        if (sale.status !== undefined) updates.status = sale.status;
         if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
         if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
         if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
         if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef || null;
-        delete updates.customerId;
-        delete updates.customerName;
-        delete updates.paymentMethod;
-        delete updates.invoiceRef;
-        delete updates.products;
+
         const { error } = await supabase.from('sales').update(updates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            // Gracefully retry without invoice_ref if column doesn't exist yet
+            if (error.message?.includes('invoice_ref')) {
+                delete updates.invoice_ref;
+                const { error: retryError } = await supabase.from('sales').update(updates).eq('id', id);
+                if (retryError) throw retryError;
+            } else {
+                throw error;
+            }
+        }
 
         // If products are being updated, replace sale_items
         if (sale.products) {
