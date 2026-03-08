@@ -119,7 +119,13 @@ export function ExpenseVoucherModal({ expense, open, onClose }: ExpenseVoucherMo
               <div style={{ fontSize: "18px", fontWeight: "700", letterSpacing: "0.5px" }}>
                 {settings.businessName}
               </div>
-              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>Expense Voucher</div>
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                {settings.businessPhone || "0707 519 4600"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
+                {settings.businessEmail || "poshomes@gmail.com"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px", letterSpacing: "0.5px" }}>Expense Voucher</div>
             </div>
 
             {/* Category badge */}
