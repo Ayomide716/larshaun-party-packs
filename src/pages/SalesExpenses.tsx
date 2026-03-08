@@ -22,7 +22,7 @@ import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
-const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
+const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], invoiceRef: '', items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
 const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
 
 export default function SalesExpenses() {
@@ -74,6 +74,7 @@ export default function SalesExpenses() {
       date: sale.date,
       paymentMethod: sale.paymentMethod,
       status: sale.status,
+      invoiceRef: sale.invoiceRef || '',
       items: sale.products.map(p => ({ productId: p.productId, productName: p.productName, qty: p.qty, price: p.price }))
     });
     setSaleDialog(true);
@@ -117,6 +118,7 @@ export default function SalesExpenses() {
           customerId: saleForm.customerId,
           customerName: customer.name,
           total,
+          invoiceRef: saleForm.invoiceRef || undefined,
           products: updatedItems
         });
         toast.success("Sale updated"); setSaleDialog(false);
@@ -137,7 +139,7 @@ export default function SalesExpenses() {
     const subtotal = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
     const total = subtotal + subtotal * (settings.taxRate / 100);
     try {
-      await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod });
+      await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod, invoiceRef: saleForm.invoiceRef || undefined });
       if (saleForm.status === 'completed') {
         for (const i of saleItems) await updateProductStock(i.productId, i.qty);
         await updateCustomerStats(customer.id, total, saleForm.date);
@@ -287,7 +289,7 @@ export default function SalesExpenses() {
                     <tr><td colSpan={9}><EmptyState icon={ShoppingBag} title="No sales yet" description="Record your first sale using the button above." /></td></tr>
                   ) : filteredSales.map(sale => (
                     <tr key={sale.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.id.slice(0, 8).toUpperCase()}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{sale.invoiceRef || sale.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3 text-muted-foreground">{sale.date}</td>
                       <td className="px-4 py-3 font-medium">{sale.customerName}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs max-w-[160px] truncate">{sale.products.map(p => `${p.productName} ×${p.qty}`).join(', ')}</td>
@@ -377,6 +379,16 @@ export default function SalesExpenses() {
                 <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                 <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
+            </div>
+
+            {/* Invoice Reference */}
+            <div className="space-y-1">
+              <Label>Invoice Reference <span className="text-muted-foreground text-xs font-normal">(optional — auto-assigned if left blank)</span></Label>
+              <Input
+                value={saleForm.invoiceRef}
+                onChange={e => setSaleForm(f => ({ ...f, invoiceRef: e.target.value }))}
+                placeholder="e.g. INV-2024-001"
+              />
             </div>
 
             {/* Date + Payment + Status */}

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export interface Settings {
   businessName: string;
+  businessPhone: string;
+  businessEmail: string;
   currency: string;
   currencySymbol: string;
   taxRate: number;
@@ -40,6 +42,8 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   businessName: "Posh Homewares",
+  businessPhone: "0707 519 4600",
+  businessEmail: "poshomes@gmail.com",
   currency: "NGN",
   currencySymbol: "₦",
   taxRate: 8.5,
@@ -76,6 +80,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSettingsId(data.user_id);
         setSettings({
           businessName: data.business_name,
+          businessPhone: data.business_phone || "0707 519 4600",
+          businessEmail: data.business_email || "poshomes@gmail.com",
           currency: data.currency,
           currencySymbol: data.currency_symbol,
           taxRate: Number(data.tax_rate),
@@ -116,7 +122,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     // Update local state immediately (Optimistic UI)
-    const newSettings = {
+    const newSettings: Settings = {
       ...settings,
       ...patch,
       notifications: patch.notifications ? { ...settings.notifications, ...patch.notifications } : settings.notifications
@@ -126,8 +132,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     // Persist to Supabase
     try {
       const dbUpdate = {
-        user_id: settingsId || user.id, // Use the shared record ID or current user's if first-time
+        user_id: settingsId || user.id,
         business_name: newSettings.businessName,
+        business_phone: newSettings.businessPhone,
+        business_email: newSettings.businessEmail,
         currency: newSettings.currency,
         currency_symbol: newSettings.currencySymbol,
         tax_rate: newSettings.taxRate,

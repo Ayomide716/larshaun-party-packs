@@ -1,8 +1,9 @@
 import { useRef } from "react";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, X } from "lucide-react";
+import { Printer, Download, FileText, X } from "lucide-react";
 import type { Sale } from "@/data/mockData";
 import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
@@ -20,12 +21,11 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   if (!sale) return null;
 
   const subtotal = sale.products.reduce((s, p) => s + p.price * p.qty, 0);
-  // Use sale.total as source of truth (already includes tax when recorded)
   const grandTotal = sale.total;
   const taxAmount = grandTotal - subtotal;
   const hasTax = taxAmount > 0.001;
-  // Back-calculate tax rate for display
   const displayTaxRate = subtotal > 0 ? ((taxAmount / subtotal) * 100).toFixed(1) : settings.taxRate.toFixed(1);
+  const invoiceLabel = sale.invoiceRef || sale.id.toUpperCase().slice(0, 8);
 
   const captureReceipt = async (): Promise<HTMLCanvasElement | null> => {
     if (!receiptRef.current) return null;
@@ -45,7 +45,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       const win = window.open("", "_blank");
       if (!win) { toast.error("Pop-up blocked. Allow pop-ups and try again."); return; }
       win.document.write(`
-        <html><head><title>Receipt – ${sale.id.toUpperCase().slice(0, 8)}</title>
+        <html><head><title>Receipt – ${invoiceLabel}</title>
         <style>body{margin:0;display:flex;justify-content:center;background:#f1f5f9}img{max-width:420px;width:100%;display:block}</style>
         </head><body><img src="${imgData}" onload="window.print();window.close()" /></body></html>
       `);
@@ -55,17 +55,169 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownloadImage = async () => {
     try {
       const canvas = await captureReceipt();
       if (!canvas) return;
       const link = document.createElement("a");
-      link.download = `Receipt_${sale.id.toUpperCase().slice(0, 8)}.png`;
+      link.download = `Receipt_${invoiceLabel}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success("Receipt downloaded!");
     } catch {
       toast.error("Failed to download receipt");
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF({ unit: "pt", format: [360, 600] });
+      const W = 360;
+      const sym = settings.currencySymbol;
+      const primaryColor: [number, number, number] = [148, 101, 74]; // warm brown
+      const slateColor: [number, number, number] = [100, 116, 139];
+      const darkColor: [number, number, number] = [30, 41, 59];
+
+      let y = 32;
+
+      // Business name header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...darkColor);
+      doc.text(settings.businessName, W / 2, y, { align: "center" });
+
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...slateColor);
+      doc.text("Sales Receipt", W / 2, y, { align: "center" });
+
+      if (settings.businessPhone) {
+        y += 13;
+        doc.text(settings.businessPhone, W / 2, y, { align: "center" });
+      }
+      if (settings.businessEmail) {
+        y += 11;
+        doc.text(settings.businessEmail, W / 2, y, { align: "center" });
+      }
+
+      // Dashed separator
+      y += 14;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineDashPattern([3, 3], 0);
+      doc.line(20, y, W - 20, y);
+      doc.setLineDashPattern([], 0);
+
+      // Meta rows
+      const metaRows: [string, string][] = [
+        ["Receipt No.", `#${invoiceLabel}`],
+        ["Date", sale.date],
+        ["Customer", sale.customerName],
+        ["Payment", sale.paymentMethod],
+        ["Status", sale.status.toUpperCase()],
+      ];
+
+      y += 14;
+      metaRows.forEach(([label, value]) => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...slateColor);
+        doc.text(label, 20, y);
+        doc.setTextColor(...darkColor);
+        doc.setFont("helvetica", "bold");
+        doc.text(value, W - 20, y, { align: "right" });
+        y += 14;
+      });
+
+      // Dashed separator
+      y += 4;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineDashPattern([3, 3], 0);
+      doc.line(20, y, W - 20, y);
+      doc.setLineDashPattern([], 0);
+      y += 12;
+
+      // Items header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...slateColor);
+      doc.text("ITEM", 20, y);
+      doc.text("QTY", 210, y, { align: "center" });
+      doc.text("UNIT", 280, y, { align: "right" });
+      doc.text("TOTAL", W - 20, y, { align: "right" });
+      y += 10;
+
+      // Items
+      sale.products.forEach(p => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...darkColor);
+        // Wrap long product names
+        const nameLines = doc.splitTextToSize(p.productName, 155);
+        doc.text(nameLines, 20, y);
+        doc.setTextColor(...slateColor);
+        doc.text(String(p.qty), 210, y, { align: "center" });
+        doc.text(`${sym}${p.price.toFixed(2)}`, 280, y, { align: "right" });
+        doc.setTextColor(...darkColor);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${sym}${(p.price * p.qty).toFixed(2)}`, W - 20, y, { align: "right" });
+        y += nameLines.length > 1 ? nameLines.length * 11 + 2 : 14;
+      });
+
+      // Dashed separator
+      y += 4;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineDashPattern([3, 3], 0);
+      doc.line(20, y, W - 20, y);
+      doc.setLineDashPattern([], 0);
+      y += 12;
+
+      // Subtotal
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...slateColor);
+      doc.text("Subtotal", 20, y);
+      doc.setTextColor(...darkColor);
+      doc.text(`${sym}${subtotal.toFixed(2)}`, W - 20, y, { align: "right" });
+
+      if (hasTax) {
+        y += 13;
+        doc.setTextColor(...slateColor);
+        doc.text(`Tax (${displayTaxRate}%)`, 20, y);
+        doc.setTextColor(...darkColor);
+        doc.text(`${sym}${taxAmount.toFixed(2)}`, W - 20, y, { align: "right" });
+      }
+
+      // Grand total
+      y += 12;
+      doc.setDrawColor(...darkColor);
+      doc.setLineWidth(1.5);
+      doc.line(20, y, W - 20, y);
+      y += 14;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(...darkColor);
+      doc.text("Total", 20, y);
+      doc.setTextColor(...primaryColor);
+      doc.text(`${sym}${grandTotal.toFixed(2)}`, W - 20, y, { align: "right" });
+
+      // Footer
+      y += 30;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("✦  THANK YOU FOR YOUR PATRONAGE  ✦", W / 2, y, { align: "center" });
+      y += 11;
+      doc.text(settings.businessName, W / 2, y, { align: "center" });
+
+      // Resize page to content
+      doc.internal.pageSize.height = y + 30;
+
+      doc.save(`Receipt_${invoiceLabel}.pdf`);
+      toast.success("PDF downloaded!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate PDF");
     }
   };
 
@@ -81,12 +233,15 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-lg">Receipt Preview</DialogTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5 text-xs">
                 <Printer className="w-3.5 h-3.5" /> Print
               </Button>
-              <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> Save Image
+              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleDownloadImage} className="gap-1.5 text-xs">
+                <Download className="w-3.5 h-3.5" /> Image
               </Button>
             </div>
           </div>
@@ -126,7 +281,13 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
               <div style={{ fontSize: "18px", fontWeight: "700", letterSpacing: "0.5px", color: "#1e293b" }}>
                 {settings.businessName}
               </div>
-              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>Sales Receipt</div>
+              {settings.businessPhone && (
+                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>{settings.businessPhone}</div>
+              )}
+              {settings.businessEmail && (
+                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>{settings.businessEmail}</div>
+              )}
+              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px", letterSpacing: "0.5px" }}>Sales Receipt</div>
             </div>
 
             {/* Divider */}
@@ -136,7 +297,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "12px" }}>
               <span style={{ color: "#64748b" }}>Receipt No.</span>
               <span style={{ fontWeight: "600", fontFamily: "monospace", fontSize: "11px" }}>
-                #{sale.id.toUpperCase().slice(0, 8)}
+                #{invoiceLabel}
               </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "12px" }}>

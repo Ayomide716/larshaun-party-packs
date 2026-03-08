@@ -23,15 +23,19 @@ export default function SettingsPage() {
   const { settings, updateSettings, lowStockAlerts, reorderRequests, requestReorder, clearReorder, dismissAlert } = useSettings();
   const [saved, setSaved] = useState(false);
   const [localName, setLocalName] = useState(settings.businessName);
+  const [localPhone, setLocalPhone] = useState(settings.businessPhone);
+  const [localEmail, setLocalEmail] = useState(settings.businessEmail);
   const [localTax, setLocalTax] = useState(String(settings.taxRate));
 
   useEffect(() => {
     setLocalName(settings.businessName);
+    setLocalPhone(settings.businessPhone);
+    setLocalEmail(settings.businessEmail);
     setLocalTax(String(settings.taxRate));
-  }, [settings.businessName, settings.taxRate]);
+  }, [settings.businessName, settings.businessPhone, settings.businessEmail, settings.taxRate]);
 
   const handleSaveBusiness = () => {
-    updateSettings({ businessName: localName, taxRate: parseFloat(localTax) || 0 });
+    updateSettings({ businessName: localName, businessPhone: localPhone, businessEmail: localEmail, taxRate: parseFloat(localTax) || 0 });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -57,6 +61,16 @@ export default function SettingsPage() {
           <div className="space-y-1.5">
             <Label>Business Name</Label>
             <Input value={localName} onChange={e => setLocalName(e.target.value)} placeholder="Your business name" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Phone Number</Label>
+            <Input value={localPhone} onChange={e => setLocalPhone(e.target.value)} placeholder="e.g. 0707 519 4600" />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Business Email</Label>
+            <Input type="email" value={localEmail} onChange={e => setLocalEmail(e.target.value)} placeholder="e.g. hello@business.com" />
           </div>
 
           <div className="space-y-1.5">

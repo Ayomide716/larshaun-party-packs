@@ -20,6 +20,7 @@ export type Sale = {
   total: number;
   status: 'completed' | 'pending' | 'refunded';
   paymentMethod: string;
+  invoiceRef?: string;
 };
 
 export type Expense = {
