@@ -136,7 +136,8 @@ export default function SalesExpenses() {
 
     if (saleItems.length === 0) { toast.error('Add at least one valid product.'); return; }
 
-    const total = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const subtotal = saleItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const total = subtotal + subtotal * (settings.taxRate / 100);
 
     try {
       await addSale({ date: saleForm.date, customerId: saleForm.customerId, customerName: customer.name, products: saleItems, total, status: saleForm.status, paymentMethod: saleForm.paymentMethod });

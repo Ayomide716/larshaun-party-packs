@@ -20,8 +20,12 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
   if (!sale) return null;
 
   const subtotal = sale.products.reduce((s, p) => s + p.price * p.qty, 0);
-  const taxAmount = subtotal * (settings.taxRate / 100);
-  const total = subtotal + taxAmount;
+  // Use sale.total as source of truth (already includes tax when recorded)
+  const grandTotal = sale.total;
+  const taxAmount = grandTotal - subtotal;
+  const hasTax = taxAmount > 0.001;
+  // Back-calculate tax rate for display
+  const displayTaxRate = subtotal > 0 ? ((taxAmount / subtotal) * 100).toFixed(1) : settings.taxRate.toFixed(1);
 
   const captureReceipt = async (): Promise<HTMLCanvasElement | null> => {
     if (!receiptRef.current) return null;
@@ -185,20 +189,20 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
               <span style={{ color: "#64748b" }}>Subtotal</span>
               <span>{settings.currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
-            {settings.taxRate > 0 && (
+            {hasTax && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "6px" }}>
-                <span style={{ color: "#64748b" }}>Tax ({settings.taxRate}%)</span>
+                <span style={{ color: "#64748b" }}>Tax ({displayTaxRate}%)</span>
                 <span>{settings.currencySymbol}{taxAmount.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: "700", marginTop: "8px", paddingTop: "8px", borderTop: "2px solid #1e293b" }}>
               <span>Total</span>
-              <span style={{ color: "hsl(22 40% 52%)" }}>{settings.currencySymbol}{total.toFixed(2)}</span>
+              <span style={{ color: "hsl(22 40% 52%)" }}>{settings.currencySymbol}{grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Footer */}
             <div style={{ textAlign: "center", marginTop: "28px", fontSize: "11px", color: "#94a3b8" }}>
-              <div style={{ marginBottom: "4px" }}>✦ Thank you for your purchase ✦</div>
+              <div style={{ marginBottom: "4px" }}>✦ THANK YOU FOR YOUR PATRONAGE ✦</div>
               <div style={{ fontSize: "10px" }}>{settings.businessName}</div>
             </div>
           </div>
