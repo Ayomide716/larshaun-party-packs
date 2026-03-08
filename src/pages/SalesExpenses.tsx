@@ -436,17 +436,15 @@ export default function SalesExpenses() {
                       <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Input
+                     <Input
                         type="number" inputMode="numeric" value={item.qty === 0 ? '' : item.qty}
                         onChange={e => updateSaleItem(i, 'qty', e.target.value === '' ? 0 : Math.max(1, +e.target.value))}
                         className="w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="Qty"
                       />
                       <Input
                         type="number" inputMode="decimal" step="0.01" value={item.price === 0 ? '' : item.price}
                         onChange={e => updateSaleItem(i, 'price', e.target.value === '' ? 0 : +e.target.value)}
                         className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="Price"
                       />
                     </div>
                     {saleForm.items.length > 1 && (
@@ -518,9 +516,8 @@ export default function SalesExpenses() {
               <Label>Amount ({settings.currencySymbol})</Label>
               <Input
                 type="number" inputMode="decimal" step="0.01"
-                value={expenseForm.amount === 0 ? '' : expenseForm.amount}
+              value={expenseForm.amount === 0 ? '' : expenseForm.amount}
                 onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value === '' ? 0 : +e.target.value }))}
-                placeholder="0.00"
                 className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
