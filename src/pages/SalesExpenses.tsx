@@ -22,7 +22,7 @@ import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
-const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', qty: 1 }] });
+const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
 const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '' });
 
 export default function SalesExpenses() {
@@ -69,18 +69,56 @@ export default function SalesExpenses() {
   const openAddSale = () => { setEditingSale(null); setSaleForm(emptySaleForm()); setSaleDialog(true); };
   const openEditSale = (sale: Sale) => {
     setEditingSale(sale);
-    setSaleForm({ customerId: sale.customerId, date: sale.date, paymentMethod: sale.paymentMethod, status: sale.status, items: sale.products.map(p => ({ productId: p.productId, qty: p.qty })) });
+    setSaleForm({
+      customerId: sale.customerId,
+      date: sale.date,
+      paymentMethod: sale.paymentMethod,
+      status: sale.status,
+      items: sale.products.map(p => ({ productId: p.productId, productName: p.productName, qty: p.qty, price: p.price }))
+    });
     setSaleDialog(true);
   };
-  const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', qty: 1 }] }));
+  const addSaleItem = () => setSaleForm(f => ({ ...f, items: [...f.items, { productId: '', productName: '', qty: 1, price: 0 }] }));
   const removeSaleItem = (i: number) => setSaleForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
   const updateSaleItem = (i: number, field: string, value: string | number) =>
     setSaleForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
 
+  // When a product is selected in the edit/add form, auto-fill price and name
+  const selectSaleItemProduct = (i: number, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    setSaleForm(f => ({
+      ...f,
+      items: f.items.map((item, idx) =>
+        idx === i ? { ...item, productId: product.id, productName: product.name, price: product.price } : item
+      )
+    }));
+  };
+
+  // Derived totals for the sale form
+  const saleFormSubtotal = saleForm.items.reduce((s, i) => s + i.price * i.qty, 0);
+  const saleFormTax = saleFormSubtotal * (settings.taxRate / 100);
+  const saleFormTotal = saleFormSubtotal + saleFormTax;
+
   const saveSale = async () => {
     if (editingSale) {
+      const customer = customers.find(c => c.id === saleForm.customerId);
+      if (!customer) { toast.error("Please select a customer"); return; }
+      const validItems = saleForm.items.filter(i => i.productId);
+      if (validItems.length === 0) { toast.error('Add at least one product.'); return; }
+      const updatedItems = validItems.map(i => ({ productId: i.productId, productName: i.productName, qty: i.qty, price: i.price }));
+      const subtotal = updatedItems.reduce((s, i) => s + i.price * i.qty, 0);
+      const total = subtotal + subtotal * (settings.taxRate / 100);
       try {
-        await updateSale(editingSale.id, { date: saleForm.date, status: saleForm.status, paymentMethod: saleForm.paymentMethod });
+        await updateSale(editingSale.id, {
+          date: saleForm.date,
+          status: saleForm.status,
+          paymentMethod: saleForm.paymentMethod,
+          customerId: saleForm.customerId,
+          customerName: customer.name,
+          total,
+          products: updatedItems
+        });
         toast.success("Sale updated"); setSaleDialog(false);
       } catch (err: any) { toast.error(err?.message || "Failed to update sale"); }
       return;
@@ -137,10 +175,12 @@ export default function SalesExpenses() {
     finally { setDeleteExpenseTarget(null); }
   };
 
+
   const statusStyle = (status: string) => cn("text-xs px-2 py-0.5 rounded-full font-medium",
-    status === 'completed' ? "bg-green-100 text-green-700" :
-      status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+    status === 'completed' ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+      status === 'pending' ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" : "bg-destructive/10 text-destructive"
   );
+
 
   const handleExportSalesCSV = () => exportToCSV(filteredSales, `sales_export_${new Date().toISOString().split('T')[0]}`);
   const handleExportSalesPDF = () => exportToPDF(['Order ID', 'Date', 'Customer', 'Items', 'Payment', 'Status', 'Total'], filteredSales.map(s => [s.id, s.date, s.customerName, s.products.map(p => p.productName).join(', '), s.paymentMethod, s.status, `${settings.currencySymbol}${s.total.toFixed(2)}`]), 'Sales Report', `sales_${new Date().toISOString().split('T')[0]}`);
@@ -174,12 +214,12 @@ export default function SalesExpenses() {
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-green-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
-          <p className="text-2xl font-display font-semibold text-green-700">{settings.currencySymbol}{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-emerald-600" /><span className="text-xs text-muted-foreground">Total Revenue</span></div>
+          <p className="text-2xl font-display font-semibold text-emerald-700 dark:text-emerald-400">{settings.currencySymbol}{totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-red-500" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
-          <p className="text-2xl font-display font-semibold text-red-600">{settings.currencySymbol}{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingDown className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Total Expenses</span></div>
+          <p className="text-2xl font-display font-semibold text-destructive">{settings.currencySymbol}{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-xs text-muted-foreground">Net Profit</span></div>
@@ -326,18 +366,21 @@ export default function SalesExpenses() {
       {/* Sale Dialog */}
       <Dialog open={saleDialog} onOpenChange={setSaleDialog}>
         <DialogContent className="w-full max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-display">{editingSale ? 'Edit Sale' : 'Record New Sale'}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="font-display">{editingSale ? 'Edit Sale' : 'Record New Sale'}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {!editingSale && (
-                <div className="col-span-1 sm:col-span-2 space-y-1">
-                  <Label>Customer</Label>
-                  <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                    <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
+            {/* Customer */}
+            <div className="space-y-1">
+              <Label>Customer</Label>
+              <Select value={saleForm.customerId} onValueChange={v => setSaleForm(f => ({ ...f, customerId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            {/* Date + Payment + Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label>Date</Label>
                 <Input type="date" value={saleForm.date} onChange={e => setSaleForm(f => ({ ...f, date: e.target.value }))} />
@@ -361,23 +404,60 @@ export default function SalesExpenses() {
                 </Select>
               </div>
             </div>
-            {!editingSale && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Products</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add</Button>
-                </div>
-                <div className="space-y-2">
-                  {saleForm.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Select value={item.productId} onValueChange={v => updateSaleItem(i, 'productId', v)}>
-                        <SelectTrigger className="flex-1"><SelectValue placeholder="Select product" /></SelectTrigger>
-                        <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Input type="number" min={1} value={item.qty} onChange={e => updateSaleItem(i, 'qty', +e.target.value)} className="w-20" />
-                      {saleForm.items.length > 1 && <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0"><X className="w-3 h-3" /></Button>}
+
+            {/* Products */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Products</Label>
+                <Button type="button" size="sm" variant="outline" onClick={addSaleItem}><Plus className="w-3 h-3 mr-1" />Add Item</Button>
+              </div>
+              <div className="space-y-2">
+                {saleForm.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Select value={item.productId} onValueChange={v => selectSaleItemProduct(i, v)}>
+                      <SelectTrigger className="flex-1 min-w-0"><SelectValue placeholder="Select product" /></SelectTrigger>
+                      <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number" min={1} value={item.qty}
+                        onChange={e => updateSaleItem(i, 'qty', Math.max(1, +e.target.value))}
+                        className="w-16 text-center"
+                        placeholder="Qty"
+                      />
+                      <Input
+                        type="number" min={0} step="0.01" value={item.price || ''}
+                        onChange={e => updateSaleItem(i, 'price', +e.target.value)}
+                        className="w-24"
+                        placeholder="Price"
+                      />
                     </div>
-                  ))}
+                    {saleForm.items.length > 1 && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => removeSaleItem(i)} className="w-8 h-8 p-0 shrink-0">
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            {saleFormSubtotal > 0 && (
+              <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm space-y-1">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{settings.currencySymbol}{saleFormSubtotal.toFixed(2)}</span>
+                </div>
+                {settings.taxRate > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Tax ({settings.taxRate}%)</span>
+                    <span>{settings.currencySymbol}{saleFormTax.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1 mt-1">
+                  <span>Total</span>
+                  <span>{settings.currencySymbol}{saleFormTotal.toFixed(2)}</span>
                 </div>
               </div>
             )}
