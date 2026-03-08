@@ -187,20 +187,20 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
               <span style={{ color: "#64748b" }}>Subtotal</span>
               <span>{settings.currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
-            {settings.taxRate > 0 && (
+            {hasTax && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "6px" }}>
-                <span style={{ color: "#64748b" }}>Tax ({settings.taxRate}%)</span>
+                <span style={{ color: "#64748b" }}>Tax ({settings.taxRate > 0 ? `${settings.taxRate}%` : "incl."})</span>
                 <span>{settings.currencySymbol}{taxAmount.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: "700", marginTop: "8px", paddingTop: "8px", borderTop: "2px solid #1e293b" }}>
               <span>Total</span>
-              <span style={{ color: "hsl(22 40% 52%)" }}>{settings.currencySymbol}{total.toFixed(2)}</span>
+              <span style={{ color: "hsl(22 40% 52%)" }}>{settings.currencySymbol}{grandTotal.toFixed(2)}</span>
             </div>
 
             {/* Footer */}
             <div style={{ textAlign: "center", marginTop: "28px", fontSize: "11px", color: "#94a3b8" }}>
-              <div style={{ marginBottom: "4px" }}>✦ Thank you for your purchase ✦</div>
+              <div style={{ marginBottom: "4px" }}>✦ THANK YOU FOR YOUR PATRONAGE ✦</div>
               <div style={{ fontSize: "10px" }}>{settings.businessName}</div>
             </div>
           </div>
