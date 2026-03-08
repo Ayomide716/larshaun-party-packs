@@ -69,12 +69,26 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
     }
   };
 
+  const drawDashedLine = (doc: jsPDF, x1: number, y1: number, x2: number, y2: number) => {
+    const segLen = 4;
+    const gapLen = 3;
+    let x = x1;
+    let drawing = true;
+    doc.setDrawColor(203, 213, 225);
+    while (x < x2) {
+      const endX = Math.min(x + (drawing ? segLen : gapLen), x2);
+      if (drawing) doc.line(x, y1, endX, y2);
+      x = endX;
+      drawing = !drawing;
+    }
+  };
+
   const handleDownloadPDF = () => {
     try {
       const doc = new jsPDF({ unit: "pt", format: [360, 600] });
       const W = 360;
       const sym = settings.currencySymbol;
-      const primaryColor: [number, number, number] = [148, 101, 74]; // warm brown
+      const primaryColor: [number, number, number] = [148, 101, 74];
       const slateColor: [number, number, number] = [100, 116, 139];
       const darkColor: [number, number, number] = [30, 41, 59];
 
@@ -103,10 +117,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
 
       // Dashed separator
       y += 14;
-      doc.setDrawColor(203, 213, 225);
-      (doc as any).setLineDash([3, 3], 0);
-      doc.line(20, y, W - 20, y);
-      (doc as any).setLineDash([], 0);
+      drawDashedLine(doc, 20, y, W - 20, y);
 
       // Meta rows
       const metaRows: [string, string][] = [
@@ -131,10 +142,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
 
       // Dashed separator
       y += 4;
-      doc.setDrawColor(203, 213, 225);
-      (doc as any).setLineDash([3, 3], 0);
-      doc.line(20, y, W - 20, y);
-      (doc as any).setLineDash([], 0);
+      drawDashedLine(doc, 20, y, W - 20, y);
       y += 12;
 
       // Items header
@@ -152,7 +160,6 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(...darkColor);
-        // Wrap long product names
         const nameLines = doc.splitTextToSize(p.productName, 155);
         doc.text(nameLines, 20, y);
         doc.setTextColor(...slateColor);
@@ -166,10 +173,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
 
       // Dashed separator
       y += 4;
-      doc.setDrawColor(203, 213, 225);
-      (doc as any).setLineDash([3, 3], 0);
-      doc.line(20, y, W - 20, y);
-      (doc as any).setLineDash([], 0);
+      drawDashedLine(doc, 20, y, W - 20, y);
       y += 12;
 
       // Subtotal
@@ -206,7 +210,7 @@ export function ReceiptModal({ sale, open, onClose }: ReceiptModalProps) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text("✦  THANK YOU FOR YOUR PATRONAGE  ✦", W / 2, y, { align: "center" });
+      doc.text("Thank you for your patronage", W / 2, y, { align: "center" });
       y += 11;
       doc.text(settings.businessName, W / 2, y, { align: "center" });
 
