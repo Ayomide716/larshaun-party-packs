@@ -301,7 +301,8 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
-                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => setReceiptSale(sale)}><Receipt className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" title="Receipt" onClick={() => setReceiptSale(sale)}><Receipt className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" title="Invoice" onClick={() => setInvoiceSale(sale)}><FileText className="w-3.5 h-3.5 text-muted-foreground" /></Button>
                           <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => openEditSale(sale)}><Edit2 className="w-3.5 h-3.5" /></Button>
                           <Button size="sm" variant="ghost" className="w-8 h-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteSaleTarget(sale)}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
