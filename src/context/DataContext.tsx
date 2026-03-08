@@ -124,8 +124,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const addProduct = async (product: Omit<Product, 'id'>) => {
         if (!user) return;
-        const { data, error } = await supabase.from('products').insert({
-            user_id: user.id,
+    const { data, error } = await supabase.from('products').insert({
             name: product.name,
             category: product.category,
             sku: product.sku,
@@ -170,7 +169,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addCustomer = async (customer: Omit<Customer, 'id'>) => {
         if (!user) return;
         const { data, error } = await supabase.from('customers').insert({
-            user_id: user.id,
             name: customer.name,
             email: customer.email,
             phone: customer.phone,
@@ -221,7 +219,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!user) return;
         // 1. Insert sale
         const { data: saleData, error: saleError } = await supabase.from('sales').insert({
-            user_id: user.id,
             date: sale.date || null,
             customer_id: sale.customerId,
             customer_name: sale.customerName,
@@ -257,7 +254,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addExpense = async (expense: Omit<Expense, 'id'>) => {
         if (!user) return;
         const { data, error } = await supabase.from('expenses').insert({
-            user_id: user.id,
             ...expense,
             date: expense.date || null
         }).select().single();
