@@ -225,6 +225,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             total: sale.total,
             status: sale.status,
             payment_method: sale.paymentMethod,
+            // invoice_ref column — add via migration if not present:
+            // ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_ref text;
             invoice_ref: sale.invoiceRef || null
         }).select().single();
 
@@ -286,7 +288,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (sale.customerId !== undefined) updates.customer_id = sale.customerId;
         if (sale.customerName !== undefined) updates.customer_name = sale.customerName;
         if (sale.paymentMethod !== undefined) updates.payment_method = sale.paymentMethod;
-        if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef;
+        if (sale.invoiceRef !== undefined) updates.invoice_ref = sale.invoiceRef || null;
         delete updates.customerId;
         delete updates.customerName;
         delete updates.paymentMethod;

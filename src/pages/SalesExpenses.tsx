@@ -5,6 +5,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { toast } from "sonner";
 import { Plus, Search, DollarSign, TrendingDown, TrendingUp, Receipt, FileText, X, ShoppingBag, CreditCard, Edit2, Trash2 } from "lucide-react";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { InvoiceModal } from "@/components/InvoiceModal";
 import { ExpenseVoucherModal } from "@/components/ExpenseVoucherModal";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
@@ -42,6 +43,7 @@ export default function SalesExpenses() {
   const [expenseForm, setExpenseForm] = useState(emptyExpenseForm());
 
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null);
   const [voucherExpense, setVoucherExpense] = useState<Expense | null>(null);
 
   const [deleteSaleTarget, setDeleteSaleTarget] = useState<Sale | null>(null);
@@ -299,7 +301,8 @@ export default function SalesExpenses() {
                       <td className="px-4 py-3 text-right font-semibold">{settings.currencySymbol}{sale.total.toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
-                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => setReceiptSale(sale)}><Receipt className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" title="Receipt" onClick={() => setReceiptSale(sale)}><Receipt className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                          <Button size="sm" variant="ghost" className="w-8 h-8 p-0" title="Invoice" onClick={() => setInvoiceSale(sale)}><FileText className="w-3.5 h-3.5 text-muted-foreground" /></Button>
                           <Button size="sm" variant="ghost" className="w-8 h-8 p-0" onClick={() => openEditSale(sale)}><Edit2 className="w-3.5 h-3.5" /></Button>
                           <Button size="sm" variant="ghost" className="w-8 h-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteSaleTarget(sale)}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
@@ -540,6 +543,7 @@ export default function SalesExpenses() {
       />
 
       <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
+      <InvoiceModal sale={invoiceSale} open={!!invoiceSale} onClose={() => setInvoiceSale(null)} />
       <ExpenseVoucherModal expense={voucherExpense} open={!!voucherExpense} onClose={() => setVoucherExpense(null)} />
     </div>
   );
