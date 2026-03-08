@@ -29,7 +29,8 @@ export default function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<Omit<Product, 'id'>>(emptyProduct);
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const { setLowStockAlerts, settings } = useSettings();
 
