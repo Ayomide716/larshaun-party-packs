@@ -21,7 +21,12 @@ interface DataContextType {
     updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
 
     addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
+    updateSale: (id: string, sale: Partial<Omit<Sale, 'id'>>) => Promise<void>;
+    deleteSale: (id: string) => Promise<void>;
+
     addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+    updateExpense: (id: string, expense: Partial<Omit<Expense, 'id'>>) => Promise<void>;
+    deleteExpense: (id: string) => Promise<void>;
 
     updateProductStock: (productId: string, deductedQty: number) => Promise<void>;
     updateCustomerStats: (customerId: string, amountSpent: number, date: string) => Promise<void>;
