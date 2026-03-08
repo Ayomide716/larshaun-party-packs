@@ -273,19 +273,19 @@ export default function Inventory() {
             </div>
             <div className="space-y-1">
               <Label>Selling Price ({settings.currencySymbol})</Label>
-              <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} />
+              <Input type="number" inputMode="decimal" value={form.price === 0 ? '' : form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? 0 : +e.target.value }))} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             </div>
             <div className="space-y-1">
               <Label>Cost Price ({settings.currencySymbol})</Label>
-              <Input type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: +e.target.value }))} />
+              <Input type="number" inputMode="decimal" value={form.cost === 0 ? '' : form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value === '' ? 0 : +e.target.value }))} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             </div>
             <div className="space-y-1">
               <Label>Stock Quantity</Label>
-              <Input type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: +e.target.value }))} />
+              <Input type="number" inputMode="numeric" value={form.stock === 0 ? '' : form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value === '' ? 0 : +e.target.value }))} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             </div>
             <div className="space-y-1">
               <Label>Min. Stock Alert</Label>
-              <Input type="number" value={form.minStock} onChange={e => setForm(f => ({ ...f, minStock: +e.target.value }))} />
+              <Input type="number" inputMode="numeric" value={form.minStock === 0 ? '' : form.minStock} onChange={e => setForm(f => ({ ...f, minStock: e.target.value === '' ? 0 : +e.target.value }))} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             </div>
             <div className="col-span-2 space-y-1">
               <Label>Description</Label>

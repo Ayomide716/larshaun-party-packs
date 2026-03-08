@@ -99,12 +99,10 @@ export default function SettingsPage() {
             <Label>Tax Rate (%)</Label>
             <Input
               type="number"
-              min={0}
-              max={100}
-              step={0.1}
+              inputMode="decimal"
               value={localTax}
               onChange={e => setLocalTax(e.target.value)}
-              placeholder="e.g. 8.5"
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </div>
