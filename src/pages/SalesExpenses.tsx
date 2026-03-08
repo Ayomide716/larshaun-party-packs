@@ -43,6 +43,7 @@ export default function SalesExpenses() {
   const [expenseForm, setExpenseForm] = useState(emptyExpenseForm());
 
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null);
   const [voucherExpense, setVoucherExpense] = useState<Expense | null>(null);
 
   const [deleteSaleTarget, setDeleteSaleTarget] = useState<Sale | null>(null);
