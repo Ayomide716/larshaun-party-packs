@@ -338,7 +338,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             products, customers, sales, expenses, isLoading, refreshData,
             addProduct, updateProduct, deleteProduct,
             addCustomer, updateCustomer,
-            addSale, addExpense,
+            addSale, updateSale, deleteSale,
+            addExpense, updateExpense, deleteExpense,
             updateProductStock, updateCustomerStats
         }}>
             {children}
