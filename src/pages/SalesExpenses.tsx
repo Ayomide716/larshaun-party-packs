@@ -543,6 +543,7 @@ export default function SalesExpenses() {
       />
 
       <ReceiptModal sale={receiptSale} open={!!receiptSale} onClose={() => setReceiptSale(null)} />
+      <InvoiceModal sale={invoiceSale} open={!!invoiceSale} onClose={() => setInvoiceSale(null)} />
       <ExpenseVoucherModal expense={voucherExpense} open={!!voucherExpense} onClose={() => setVoucherExpense(null)} />
     </div>
   );
