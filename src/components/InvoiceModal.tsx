@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
