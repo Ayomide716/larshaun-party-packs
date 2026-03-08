@@ -34,25 +34,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
   const statusColor =
     sale.status === "completed" ? "#16a34a" : sale.status === "pending" ? "#d97706" : "#dc2626";
 
-  const handleDownloadImage = async () => {
-    try {
-      if (!previewRef.current) return;
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-      const link = document.createElement("a");
-      link.download = `Invoice_${invoiceNumber}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("Invoice image downloaded!");
-    } catch {
-      toast.error("Failed to download invoice image");
-    }
-  };
-
   const handleDownloadPDF = () => {
     try {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -62,7 +43,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
       const primaryColor: [number, number, number] = [148, 101, 74];
       const lightBg: [number, number, number] = [241, 245, 249];
 
-      // ── Header strip ──────────────────────────────────────
       doc.setFillColor(...primaryColor);
       doc.rect(0, 0, W, 82, "F");
 
@@ -80,7 +60,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
       doc.text(`${bizPhone}  |  ${bizEmail}`, 40, 56);
       doc.text(invoiceNumber, W - 40, 56, { align: "right" });
 
-      // ── Info cards ────────────────────────────────────────
       let y = 106;
       const cardW = 240;
 
@@ -88,7 +67,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
       doc.roundedRect(30, y, cardW, 72, 4, 4, "F");
       doc.roundedRect(W - 270, y, cardW, 72, 4, 4, "F");
 
-      // Left: Bill To
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...slateColor);
@@ -104,7 +82,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
       doc.text(`Payment: ${sale.paymentMethod}`, 44, y + 46);
       doc.text(`Date: ${sale.date}`, 44, y + 58);
 
-      // Right: Invoice details
       const rx = W - 266;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
@@ -128,7 +105,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
 
       y += 90;
 
-      // ── Items table ───────────────────────────────────────
       const tableData = sale.products.map((p) => [
         p.productName,
         String(p.qty),
@@ -165,7 +141,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
 
       y = (doc as any).lastAutoTable.finalY + 20;
 
-      // ── Totals box ────────────────────────────────────────
       const boxLines = hasTax ? 3 : 2;
       const boxH = boxLines * 22 + 24;
       const boxX = W - 230;
@@ -197,7 +172,6 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
       doc.text("TOTAL", boxX, totalLineY + 16);
       doc.text(`${sym}${grandTotal.toFixed(2)}`, W - 38, totalLineY + 16, { align: "right" });
 
-      // ── Footer ────────────────────────────────────────────
       const pageH = (doc.internal.pageSize as any).height;
       const footerY = Math.max(y + boxH + 40, pageH - 30);
 
@@ -224,20 +198,14 @@ export function InvoiceModal({ sale, open, onClose }: InvoiceModalProps) {
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-lg">Invoice Preview</DialogTitle>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
-                <FileText className="w-3.5 h-3.5" /> PDF
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleDownloadImage} className="gap-1.5 text-xs">
-                <Download className="w-3.5 h-3.5" /> Image
-              </Button>
-            </div>
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="gap-1.5 text-xs">
+              <FileText className="w-3.5 h-3.5" /> Download PDF
+            </Button>
           </div>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[75vh] p-4 bg-muted/30">
           <div
-            ref={previewRef}
             style={{
               fontFamily: "'Inter', 'Helvetica Neue', Helvetica, sans-serif",
               background: "#ffffff",
