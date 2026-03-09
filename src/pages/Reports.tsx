@@ -38,7 +38,7 @@ export default function Reports() {
     exportToPDF(['Metric', 'Value'], [
       ['Total Revenue', `${settings.currency} ${totalRevenue.toFixed(2)}`],
       ['Total Expenses', `${settings.currency} ${totalExpenses.toFixed(2)}`],
-      ['Net Profit', `${settings.currency} ${profit.toFixed(2)}`],
+      ['Net Profit (Loss)', `${settings.currency} ${profit.toFixed(2)}`],
       ['Profit Margin', `${margin}%`],
       ['Average Order Value', `${settings.currency} ${avgOrderValue.toFixed(2)}`],
       ['VIP Revenue', `${settings.currency} ${vipRevenue.toFixed(2)}`],
