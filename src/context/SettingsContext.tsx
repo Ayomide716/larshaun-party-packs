@@ -42,8 +42,8 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   businessName: "Larshaun party packs",
-  businessPhone: "0707 519 4600",
-  businessEmail: "poshomes@gmail.com",
+  businessPhone: "",
+  businessEmail: "",
   currency: "NGN",
   currencySymbol: "₦",
   taxRate: 8.5,
@@ -80,8 +80,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSettingsId(data.user_id);
         setSettings({
           businessName: data.business_name,
-          businessPhone: data.business_phone || "0707 519 4600",
-          businessEmail: data.business_email || "poshomes@gmail.com",
+          businessPhone: data.business_phone || "",
+          businessEmail: data.business_email || "",
           currency: data.currency,
           currencySymbol: data.currency_symbol,
           taxRate: Number(data.tax_rate),

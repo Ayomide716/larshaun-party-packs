@@ -71,7 +71,18 @@ export default function Inventory() {
   const save = async () => {
     if (!form.name || !form.sku) { toast.error("Product name and SKU are required"); return; }
     try {
-      const payload = { ...form, imageEmoji: emojis[form.category] || '📦' };
+      const finalCategory = showNewCategory && newCategoryName.trim() ? newCategoryName.trim() : form.category;
+      if (!finalCategory) {
+        toast.error("Category is required");
+        return;
+      }
+
+      const payload = {
+        ...form,
+        category: finalCategory,
+        imageEmoji: emojis[finalCategory] || '📦'
+      };
+
       if (editing) {
         await updateProduct(editing.id, payload);
         toast.success("Product updated successfully");
@@ -79,10 +90,15 @@ export default function Inventory() {
         await addProduct(payload);
         toast.success("Product added successfully");
       }
-      if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
+
+      if (showNewCategory && newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
         setCategories(prev => [...prev, newCategoryName.trim()]);
       }
+
       setDialogOpen(false);
+      setShowNewCategory(false);
+      setNewCategoryName('');
+
     } catch (error: any) {
       toast.error(error?.message || "Failed to save product");
     }
@@ -287,7 +303,11 @@ export default function Inventory() {
                     disabled={!newCategoryName.trim()}
                     onClick={() => {
                       if (!newCategoryName.trim()) return;
-                      setForm(f => ({ ...f, category: newCategoryName.trim() }));
+                      const newCategory = newCategoryName.trim();
+                      setForm(f => ({ ...f, category: newCategory }));
+                      if (!categories.includes(newCategory)) {
+                        setCategories(prev => [...prev, newCategory]);
+                      }
                       setShowNewCategory(false);
                       setNewCategoryName('');
                     }}
