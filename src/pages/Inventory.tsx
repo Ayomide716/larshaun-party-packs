@@ -79,10 +79,10 @@ export default function Inventory() {
         await addProduct(payload);
         toast.success("Product added successfully");
       }
-      setDialogOpen(false);
       if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
         setCategories(prev => [...prev, newCategoryName.trim()]);
       }
+      setDialogOpen(false);
     } catch (error: any) {
       toast.error(error?.message || "Failed to save product");
     }
