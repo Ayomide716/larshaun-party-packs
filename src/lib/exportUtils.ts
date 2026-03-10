@@ -63,10 +63,10 @@ export const generateInvoicePDF = (sale: Sale, currencyCode: string = 'NGN', bus
 
   // Business Details
   let yPos = 20;
-  doc.text(businessDetails?.businessName || 'Posh Homewares', 140, yPos);
+  doc.text(businessDetails?.businessName || 'Larshaun party packs', 140, yPos);
   doc.text(businessDetails?.address || 'Lagos, Nigeria', 140, yPos + 5);
   doc.text(businessDetails?.city || 'HQ Office', 140, yPos + 10);
-  doc.text(businessDetails?.email || 'hello@poshhomewares.com', 140, yPos + 15);
+  doc.text(businessDetails?.email || 'hello@larshaunpartypacks.com', 140, yPos + 15);
 
   // Invoice Details
   yPos = 45;

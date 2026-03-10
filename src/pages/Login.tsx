@@ -70,7 +70,7 @@ export default function Login() {
                                 <BookOpen className="w-6 h-6 text-primary" />
                             </div>
                             <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-                                Posh Homewares
+                                Larshaun party packs
                             </h1>
                         </div>
                         <h2 className="text-2xl font-semibold tracking-tight">
@@ -152,7 +152,7 @@ export default function Login() {
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 font-medium text-primary-foreground/80">
                         <BookOpen className="h-5 w-5" />
-                        <span>Posh Homewares OS</span>
+                        <span>Larshaun party packs OS</span>
                     </div>
                 </div>
 
@@ -166,7 +166,7 @@ export default function Login() {
                 </div>
 
                 <div className="relative z-10 text-sm font-medium text-primary-foreground/60">
-                    © {new Date().getFullYear()} Posh Homewares. All rights reserved.
+                    © {new Date().getFullYear()} Larshaun party packs. All rights reserved.
                 </div>
             </div>
         </div>
