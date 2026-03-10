@@ -17,10 +17,10 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonTableRow } from "@/components/SkeletonCard";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
-const DEFAULT_CATEGORIES = ["Reed Diffusers", "Humidifiers", "Kitchen Runners", "Ceramic Vases", "Scented Candles"];
-const emojis: Record<string, string> = { "Reed Diffusers": "🌿", "Humidifiers": "💧", "Kitchen Runners": "🏡", "Ceramic Vases": "🏺", "Scented Candles": "🕯️" };
+const DEFAULT_CATEGORIES = ["Lunch Boxes", "Puzzle Games", "Toys", "Party Supplies", "Gift Bags"];
+const emojis: Record<string, string> = { "Lunch Boxes": "🍱", "Puzzle Games": "🧩", "Toys": "🧸", "Party Supplies": "🎉", "Gift Bags": "🛍️" };
 
-const emptyProduct: Omit<Product, 'id'> = { name: '', category: 'Scented Candles', sku: '', price: 0, cost: 0, stock: 0, minStock: 10, description: '', imageEmoji: '🕯️' };
+const emptyProduct: Omit<Product, 'id'> = { name: '', category: 'Lunch Boxes', sku: '', price: 0, cost: 0, stock: 0, minStock: 10, description: '', imageEmoji: '🍱' };
 
 export default function Inventory() {
   const { products, addProduct, updateProduct, deleteProduct, isLoading } = useData();
@@ -36,6 +36,7 @@ export default function Inventory() {
 
   const productCategories = Array.from(new Set(products.map(p => p.category)));
   const allCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...productCategories]));
+  const [categories, setCategories] = useState(allCategories);
 
   useEffect(() => {
     if (!settings.notifications.lowStock) return;
@@ -79,8 +80,9 @@ export default function Inventory() {
         toast.success("Product added successfully");
       }
       setDialogOpen(false);
-      setShowNewCategory(false);
-      setNewCategoryName('');
+      if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
+        setCategories(prev => [...prev, newCategoryName.trim()]);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Failed to save product");
     }
@@ -300,7 +302,7 @@ export default function Inventory() {
                 }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {allCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     <SelectItem value="__custom__">＋ Add new category…</SelectItem>
                   </SelectContent>
                 </Select>
