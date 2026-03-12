@@ -307,25 +307,55 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const addExpense = async (expense: Omit<Expense, 'id'>) => {
         if (!user) return;
-        const { data, error } = await supabase.from('expenses').insert({
-            ...expense,
+        const expensePayload: any = {
             date: expense.date || null,
+            category: expense.category,
+            description: expense.description,
+            amount: expense.amount,
+            vendor: expense.vendor,
             voucher_ref: expense.voucherRef || null
-        }).select().single();
+        };
+
+        const { data, error } = await supabase.from('expenses').insert(expensePayload).select().single();
 
         if (error) {
+            // If error is about missing voucher_ref column, retry without it
+            if (error.message?.includes('voucher_ref')) {
+                console.log("Retrying expense insert without voucher_ref due to missing column");
+                delete expensePayload.voucher_ref;
+                const { data: retryData, error: retryError } = await supabase.from('expenses').insert(expensePayload).select().single();
+                if (retryError) { console.error("Error adding expense (retry):", retryError); throw retryError; }
+                if (retryData) setExpenses(prev => [{ ...retryData, voucherRef: undefined }, ...prev]);
+                return;
+            }
             console.error("Error adding expense:", error);
+            console.error("Error details:", JSON.stringify(error, null, 2));
+            console.error("Expense payload:", JSON.stringify(expensePayload, null, 2));
             throw error;
         }
         if (data) setExpenses(prev => [{ ...data, voucherRef: data.voucher_ref || undefined }, ...prev]);
     };
 
     const updateExpense = async (id: string, expense: Partial<Omit<Expense, 'id'>>) => {
-        const updates: any = { ...expense };
+        const updates: any = {};
+        if (expense.date !== undefined) updates.date = expense.date || null;
+        if (expense.category !== undefined) updates.category = expense.category;
+        if (expense.description !== undefined) updates.description = expense.description;
+        if (expense.amount !== undefined) updates.amount = expense.amount;
+        if (expense.vendor !== undefined) updates.vendor = expense.vendor;
         if (expense.voucherRef !== undefined) updates.voucher_ref = expense.voucherRef || null;
-        delete updates.voucherRef;
+        
         const { error } = await supabase.from('expenses').update(updates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            // Gracefully retry without voucher_ref if column doesn't exist yet
+            if (error.message?.includes('voucher_ref')) {
+                delete updates.voucher_ref;
+                const { error: retryError } = await supabase.from('expenses').update(updates).eq('id', id);
+                if (retryError) throw retryError;
+            } else {
+                throw error;
+            }
+        }
         setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...expense } : e));
     };
 
