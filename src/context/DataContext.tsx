@@ -13,7 +13,8 @@ interface DataContextType {
     refreshData: () => Promise<void>;
 
     // Global mutators
-    addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+    addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
+    addProducts: (products: Omit<Product, 'id'>[]) => Promise<Product[]>;
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
 
@@ -122,9 +123,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
     }, [user]);
 
-    const addProduct = async (product: Omit<Product, 'id'>) => {
-        if (!user) return;
-    const { data, error } = await supabase.from('products').insert({
+    const addProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+        if (!user) throw new Error("Not authenticated");
+        const { data, error } = await supabase.from('products').insert({
             name: product.name,
             category: product.category,
             sku: product.sku,
@@ -140,12 +141,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             console.error("Error adding product:", error);
             throw error;
         }
-        if (data) setProducts(prev => [{
-            ...data,
-            minStock: data.min_stock,
-            imageEmoji: data.image_emoji
-        }, ...prev]);
+        const newProduct = { ...data, minStock: data.min_stock, imageEmoji: data.image_emoji };
+        setProducts(prev => [newProduct, ...prev]);
+        return newProduct;
     };
+
+    const addProducts = async (products: Omit<Product, 'id'>[]): Promise<Product[]> => {
+      if (!user) throw new Error("Not authenticated");
+      if (products.length === 0) return [];
+  
+      const productsToInsert = products.map(product => ({
+          name: product.name,
+          category: product.category,
+          sku: product.sku,
+          price: product.price,
+          cost: product.cost,
+          stock: product.stock,
+          min_stock: product.minStock,
+          description: product.description,
+          image_emoji: product.imageEmoji
+      }));
+  
+      const { data, error } = await supabase.from('products').insert(productsToInsert).select();
+  
+      if (error) {
+          console.error("Error adding products:", error);
+          throw error;
+      }
+      const newProducts = data.map(p => ({ ...p, minStock: p.min_stock, imageEmoji: p.image_emoji }));
+      setProducts(prev => [...newProducts, ...prev]);
+      return newProducts;
+  };
 
     const updateProduct = async (id: string, product: Partial<Product>) => {
         const updates: any = { ...product };
@@ -391,7 +417,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return (
         <DataContext.Provider value={{
             products, customers, sales, expenses, isLoading, refreshData,
-            addProduct, updateProduct, deleteProduct,
+            addProduct, addProducts, updateProduct, deleteProduct,
             addCustomer, updateCustomer,
             addSale, updateSale, deleteSale,
             addExpense, updateExpense, deleteExpense,

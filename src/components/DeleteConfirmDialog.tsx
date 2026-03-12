@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ interface DeleteConfirmDialogProps {
   title?: string;
   description?: string;
   onConfirm: () => void;
+  loading?: boolean;
 }
 
 export function DeleteConfirmDialog({
@@ -23,6 +25,7 @@ export function DeleteConfirmDialog({
   title = "Delete record?",
   description = "This action cannot be undone.",
   onConfirm,
+  loading = false,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -32,11 +35,13 @@ export function DeleteConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
+            disabled={loading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>
