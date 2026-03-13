@@ -118,7 +118,36 @@ export default function SalesExpenses() {
     try {
       // Handle editing existing sale
       if (editingSale) {
-        // ... (rest of the edit logic is unchanged)
+        const customer = customers.find(c => c.id === saleForm.customerId);
+        if (!customer) {
+          toast.error("Please select a customer");
+          return;
+        }
+
+        const validItems = saleForm.items.filter(item => item.productId && item.productName);
+        if (validItems.length === 0) {
+          toast.error('Add at least one valid product.');
+          return;
+        }
+
+        const subtotal = validItems.reduce((s, i) => s + i.price * i.qty, 0);
+        const total = subtotal + subtotal * (settings.taxRate / 100);
+
+        await updateSale(editingSale.id, {
+          date: saleForm.date,
+          customerId: saleForm.customerId,
+          customerName: customer.name,
+          products: validItems,
+          total,
+          status: saleForm.status,
+          paymentMethod: saleForm.paymentMethod,
+          invoiceRef: saleForm.invoiceRef || undefined
+        });
+
+        toast.success('Sale updated successfully.');
+        setSaleDialog(false);
+        setSaleForm(emptySaleForm());
+        setEditingSale(null);
         return;
       }
 

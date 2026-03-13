@@ -126,6 +126,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
         if (!user) throw new Error("Not authenticated");
         const { data, error } = await supabase.from('products').insert({
+            user_id: user.id,
             name: product.name,
             category: product.category,
             sku: product.sku,
@@ -151,6 +152,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (products.length === 0) return [];
   
       const productsToInsert = products.map(product => ({
+          user_id: user.id,
           name: product.name,
           category: product.category,
           sku: product.sku,
@@ -195,6 +197,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addCustomer = async (customer: Omit<Customer, 'id'>) => {
         if (!user) return;
         const { data, error } = await supabase.from('customers').insert({
+            user_id: user.id,
             name: customer.name,
             email: customer.email,
             phone: customer.phone,
@@ -308,6 +311,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const addExpense = async (expense: Omit<Expense, 'id'>) => {
         if (!user) return;
         const expensePayload: any = {
+            user_id: user.id,
             date: expense.date || null,
             category: expense.category,
             description: expense.description,

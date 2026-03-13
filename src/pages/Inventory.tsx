@@ -71,8 +71,8 @@ export default function Inventory() {
   const save = async () => {
     if (!form.name || !form.sku) { toast.error("Product name and SKU are required"); return; }
     try {
-      const finalCategory = showNewCategory && newCategoryName.trim() ? newCategoryName.trim() : form.category;
-      if (!finalCategory) {
+      const finalCategory = (showNewCategory && newCategoryName.trim()) ? newCategoryName.trim() : form.category;
+      if (!finalCategory || finalCategory === '__custom__') {
         toast.error("Category is required");
         return;
       }
