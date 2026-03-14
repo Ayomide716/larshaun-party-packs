@@ -250,9 +250,12 @@ export default function SalesExpenses() {
       const localProducts = [...products];
 
       for (const row of importedData) {
-        // Find keys in a case-insensitive way
+        // Find keys in a case-insensitive way, ignoring potential duplicate suffixes like _1, _2
         const getVal = (keys: string[]) => {
-          const foundKey = Object.keys(row).find(k => keys.includes(k.toLowerCase().trim()));
+          const foundKey = Object.keys(row).find(k => {
+            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '');
+            return keys.includes(normalized);
+          });
           return foundKey ? row[foundKey] : undefined;
         };
 
