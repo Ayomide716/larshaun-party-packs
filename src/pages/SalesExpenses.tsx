@@ -52,10 +52,6 @@ export default function SalesExpenses() {
   const [deleteSaleTarget, setDeleteSaleTarget] = useState<Sale | null>(null);
   const [deleteExpenseTarget, setDeleteExpenseTarget] = useState<Expense | null>(null);
 
-  const totalRevenue = sales.filter(s => s.status === 'completed').reduce((s, sale) => s + sale.total, 0);
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const profit = totalRevenue - totalExpenses;
-
   const filteredSales = sales.filter(s => {
     const matchesSearch = s.customerName.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = saleStatusFilter === 'All' || s.status === saleStatusFilter;
@@ -69,6 +65,10 @@ export default function SalesExpenses() {
     const matchesDate = (!dateRange.start || e.date >= dateRange.start) && (!dateRange.end || e.date <= dateRange.end);
     return matchesSearch && matchesCategory && matchesDate;
   });
+
+  const totalRevenue = filteredSales.filter(s => s.status === 'completed').reduce((s, sale) => s + sale.total, 0);
+  const totalExpenses = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const profit = totalRevenue - totalExpenses;
 
   // --- Sale helpers ---
   const openAddSale = () => { setEditingSale(null); setSaleForm(emptySaleForm()); setSaleDialog(true); };

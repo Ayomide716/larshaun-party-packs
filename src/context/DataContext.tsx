@@ -20,6 +20,7 @@ interface DataContextType {
 
     addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
     updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+    deleteCustomer: (id: string) => Promise<void>;
 
     addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
     updateSale: (id: string, sale: Partial<Omit<Sale, 'id'>>) => Promise<void>;
@@ -244,6 +245,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...customer } : c));
     };
 
+    const deleteCustomer = async (id: string) => {
+        const { error } = await supabase.from('customers').delete().eq('id', id);
+        if (error) {
+            console.error("Error deleting customer:", error);
+            throw error;
+        }
+        setCustomers(prev => prev.filter(c => c.id !== id));
+    };
+
     const addSale = async (sale: Omit<Sale, 'id'>) => {
         if (!user) return;
         // 1. Insert sale — invoice_ref requires running supabase_invoice_ref_migration.sql first
@@ -452,7 +462,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         <DataContext.Provider value={{
             products, customers, sales, expenses, isLoading, refreshData,
             addProduct, addProducts, updateProduct, deleteProduct,
-            addCustomer, updateCustomer,
+            addCustomer, updateCustomer, deleteCustomer,
             addSale, updateSale, deleteSale,
             addExpense, updateExpense, deleteExpense,
             updateProductStock, updateCustomerStats

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import type { Customer } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
-import { Plus, Search, Mail, Phone, MapPin, Edit2, X, Users, ChevronLeft } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Edit2, X, Users, ChevronLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ const emptyCustomer: Omit<Customer, 'id'> = {
 };
 
 export default function CRM() {
-  const { customers, addCustomer, updateCustomer, sales, isLoading } = useData();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, sales, isLoading } = useData();
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('All');
@@ -39,6 +39,8 @@ export default function CRM() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [form, setForm] = useState<Omit<Customer, 'id'>>(emptyCustomer);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [customerIdToDelete, setCustomerIdToDelete] = useState<string | null>(null);
 
   const filtered = customers.filter(c =>
     (segmentFilter === 'All' || c.segment === segmentFilter) &&
@@ -61,6 +63,25 @@ export default function CRM() {
       else { await addCustomer(form); toast.success("Customer added"); }
       setDialogOpen(false);
     } catch { toast.error("Failed to save customer"); }
+  };
+
+  const handleDelete = (id: string) => {
+    setCustomerIdToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerIdToDelete) return;
+    try {
+      await deleteCustomer(customerIdToDelete);
+      toast.success("Customer deleted");
+      setSelectedId(null);
+      setIsDeleteDialogOpen(false);
+    } catch {
+      toast.error("Failed to delete customer");
+    } finally {
+      setCustomerIdToDelete(null);
+    }
   };
 
   const handleExportCSV = () => exportToCSV(customers, `customers_export_${new Date().toISOString().split('T')[0]}`);
@@ -125,7 +146,7 @@ export default function CRM() {
           <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="mb-3 -ml-1 text-muted-foreground">
             <ChevronLeft className="w-4 h-4 mr-1" />Back to list
           </Button>
-          <CustomerDetail selected={selected!} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onClose={() => setSelectedId(null)} />
+          <CustomerDetail selected={selected!} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onDelete={handleDelete} onClose={() => setSelectedId(null)} />
         </div>
       )}
 
@@ -168,7 +189,7 @@ export default function CRM() {
         {selected && (
           <div className="hidden sm:block w-72 lg:w-80 flex-shrink-0">
             <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-elevated)] p-5 sticky top-20">
-              <CustomerDetail selected={selected} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onClose={() => setSelectedId(null)} />
+              <CustomerDetail selected={selected} customerSales={customerSales} settings={settings} segmentColors={segmentColors} onEdit={openEdit} onDelete={handleDelete} onClose={() => setSelectedId(null)} />
             </div>
           </div>
         )}
@@ -198,17 +219,36 @@ export default function CRM() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" /> Delete Customer
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground">
+            Are you sure you want to delete this customer? This action will permanently remove the customer record and all associated history. This action cannot be undone.
+          </div>
+          <DialogFooter className="flex-row gap-3 sm:justify-end">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
+            <Button onClick={confirmDelete} variant="destructive" className="flex-1 sm:flex-none">Delete Customer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // Extracted detail panel to avoid duplication between mobile/desktop renders
-function CustomerDetail({ selected, customerSales, settings, segmentColors, onEdit, onClose }: {
+function CustomerDetail({ selected, customerSales, settings, segmentColors, onEdit, onDelete, onClose }: {
   selected: Customer;
   customerSales: any[];
   settings: any;
   segmentColors: Record<string, string>;
   onEdit: (c: Customer) => void;
+  onDelete: (id: string) => void;
   onClose: () => void;
 }) {
   return (
@@ -224,8 +264,9 @@ function CustomerDetail({ selected, customerSales, settings, segmentColors, onEd
           </div>
         </div>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => onEdit(selected)} className="w-7 h-7 p-0"><Edit2 className="w-3.5 h-3.5" /></Button>
-          <Button size="sm" variant="ghost" onClick={onClose} className="w-7 h-7 p-0 hidden sm:flex"><X className="w-3.5 h-3.5" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => onEdit(selected)} className="w-7 h-7 p-0 text-muted-foreground hover:text-foreground"><Edit2 className="w-3.5 h-3.5" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => onDelete(selected.id)} className="w-7 h-7 p-0 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+          <Button size="sm" variant="ghost" onClick={onClose} className="w-7 h-7 p-0 hidden sm:flex text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></Button>
         </div>
       </div>
       <div className="space-y-2 text-sm">
