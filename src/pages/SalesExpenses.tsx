@@ -342,6 +342,7 @@ export default function SalesExpenses() {
           const price = parseFloat(getVal(['price', 'unitprice'])) || product.price;
           const total = parseFloat(getVal(['total', 'amount'])) || (price * qty * (1 + settings.taxRate / 100));
           const dateRaw = String(getVal(['date', 'saledate']) || '').trim();
+          const status = (String(getVal(['status']) || 'completed').toLowerCase().trim() as Sale['status']);
           
           let date = new Date().toISOString().split('T')[0];
           if (dateRaw) {
@@ -377,12 +378,12 @@ export default function SalesExpenses() {
             customerName: customer.name,
             products: [{ productId: product.id, productName: product.name, qty, price }],
             total,
-            status: (getVal(['status']) as Sale['status']) || 'completed',
+            status,
             paymentMethod: getVal(['paymentMethod', 'payment', 'method']) || 'Cash',
             invoiceRef: getVal(['invoiceRef', 'invoice', 'orderid']) || undefined
           });
 
-          if ((getVal(['status']) || 'completed') === 'completed') {
+          if (status === 'completed') {
             await updateProductStock(product.id, qty);
             await updateCustomerStats(customer.id, total, date);
             const pIdx = localProducts.findIndex(p => p.id === product.id);

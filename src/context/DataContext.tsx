@@ -461,24 +461,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateCustomerStats = async (customerId: string, amountSpent: number, date: string) => {
+        // Use a functional update to ensure we're working with the latest state
+        setCustomers(prev => {
+            const customer = prev.find(c => c.id === customerId);
+            if (!customer) return prev;
+
+            const updatedCustomer = {
+                ...customer,
+                totalPurchases: customer.totalPurchases + 1,
+                totalSpent: customer.totalSpent + amountSpent,
+                lastPurchase: date
+            };
+
+            return prev.map(c => c.id === customerId ? updatedCustomer : c);
+        });
+
+        // Update database as well
         const { data: customer } = await supabase.from('customers').select('total_purchases, total_spent').eq('id', customerId).single();
-        if (!customer) return;
-
-        const newStats = {
-            total_purchases: customer.total_purchases + 1,
-            total_spent: customer.total_spent + amountSpent,
-            last_purchase: date
-        };
-
-        const { error } = await supabase.from('customers').update(newStats).eq('id', customerId);
-        if (error) throw error;
-
-        setCustomers(prev => prev.map(c => c.id === customerId ? {
-            ...c,
-            totalPurchases: newStats.total_purchases,
-            totalSpent: newStats.total_spent,
-            lastPurchase: date
-        } : c));
+        if (customer) {
+            const newStats = {
+                total_purchases: customer.total_purchases + 1,
+                total_spent: customer.total_spent + amountSpent,
+                last_purchase: date
+            };
+            await supabase.from('customers').update(newStats).eq('id', customerId);
+        }
     };
 
     return (
