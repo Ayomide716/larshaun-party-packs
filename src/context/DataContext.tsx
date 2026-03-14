@@ -9,6 +9,7 @@ interface DataContextType {
     customers: Customer[];
     sales: Sale[];
     expenses: Expense[];
+    expenseCategories: string[];
     isLoading: boolean;
     refreshData: () => Promise<void>;
 
@@ -522,9 +523,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const defaultExpenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software"];
+    const expenseCategories = Array.from(new Set([...defaultExpenseCategories, ...expenses.map(e => e.category)])).sort();
+
     return (
         <DataContext.Provider value={{
-            products, customers, sales, expenses, isLoading, refreshData,
+            products, customers, sales, expenses, expenseCategories, isLoading, refreshData,
             addProduct, addProducts, updateProduct, deleteProduct,
             addCustomer, updateCustomer, deleteCustomer,
             addSale, updateSale, deleteSale,

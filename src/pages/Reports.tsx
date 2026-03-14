@@ -63,8 +63,8 @@ export default function Reports() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "Total Revenue", value: `${settings.currencySymbol}${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-green-700", bg: "bg-green-50" },
-            { label: "Net Profit (Loss)", value: `${settings.currencySymbol}${profit.toFixed(2)}`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
             { label: "Total Expenses", value: `${settings.currencySymbol}${totalExpenses.toFixed(2)}`, icon: TrendingDown, color: "text-red-600", bg: "bg-red-50" },
+            { label: "Net Profit (Loss)", value: `${settings.currencySymbol}${profit.toFixed(2)}`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
             { label: "Profit Margin", value: `${margin}%`, icon: ShoppingCart, color: "text-blue-700", bg: "bg-blue-50" },
           ].map(item => (
             <div key={item.label} className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-[var(--shadow-card)]">

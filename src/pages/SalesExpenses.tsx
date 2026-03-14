@@ -21,14 +21,13 @@ import { ExportButton } from "@/components/ExportButton";
 import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
-const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
 const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], invoiceRef: '', items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
 const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', otherCategory: '', description: '', amount: 0, vendor: '', voucherRef: '' });
 
 export default function SalesExpenses() {
-  const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, addProduct, addProducts, customers, addCustomer, updateProductStock, updateCustomerStats, isLoading } = useData();
+  const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, expenseCategories, products, addProduct, addProducts, customers, addCustomer, updateProductStock, updateCustomerStats, isLoading } = useData();
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -789,7 +788,10 @@ export default function SalesExpenses() {
               <Label>Category</Label>
               <Select value={expenseForm.category} onValueChange={v => setExpenseForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             {expenseForm.category === 'Other' && (
