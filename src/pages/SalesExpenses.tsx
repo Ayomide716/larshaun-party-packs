@@ -25,7 +25,7 @@ const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "
 const paymentMethods = ["Credit Card", "PayPal", "Bank Transfer", "Cash"];
 
 const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Credit Card', status: 'completed' as Sale['status'], invoiceRef: '', items: [{ productId: '', productName: '', qty: 1, price: 0 }] });
-const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '', voucherRef: '' });
+const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', otherCategory: '', description: '', amount: 0, vendor: '', voucherRef: '' });
 
 export default function SalesExpenses() {
   const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, addProduct, addProducts, customers, addCustomer, updateProductStock, updateCustomerStats, isLoading } = useData();
@@ -261,8 +261,8 @@ export default function SalesExpenses() {
               if (columnMap[key] && row[columnMap[key]] !== undefined) return row[columnMap[key]];
             }
             const foundKey = rowKeys.find(k => {
-              const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-0]/g, '');
-              return keys.some(target => target.replace(/[^a-z0-0]/g, '') === normalized);
+              const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-9]/g, '');
+              return keys.some(target => target.replace(/[^a-z0-9]/g, '') === normalized);
             });
             return foundKey ? row[foundKey] : undefined;
           };
@@ -413,13 +413,31 @@ export default function SalesExpenses() {
   const openAddExpense = () => { setEditingExpense(null); setExpenseForm(emptyExpenseForm()); setExpenseDialog(true); };
   const openEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
-    setExpenseForm({ date: expense.date, category: expense.category, description: expense.description, amount: expense.amount, vendor: expense.vendor, voucherRef: expense.voucherRef || '' });
+    const isOther = !expenseCategories.includes(expense.category);
+    setExpenseForm({ 
+      date: expense.date, 
+      category: isOther ? 'Other' : expense.category, 
+      otherCategory: isOther ? expense.category : '',
+      description: expense.description, 
+      amount: expense.amount, 
+      vendor: expense.vendor, 
+      voucherRef: expense.voucherRef || '' 
+    });
     setExpenseDialog(true);
   };
   const saveExpense = async () => {
     try {
-      if (editingExpense) { await updateExpense(editingExpense.id, expenseForm); toast.success("Expense updated"); }
-      else { await addExpense(expenseForm); toast.success("Expense recorded"); }
+      const finalCategory = expenseForm.category === 'Other' ? expenseForm.otherCategory : expenseForm.category;
+      if (!finalCategory) {
+        toast.error("Please provide a category");
+        return;
+      }
+
+      const expenseData = { ...expenseForm, category: finalCategory };
+      delete (expenseData as any).otherCategory;
+
+      if (editingExpense) { await updateExpense(editingExpense.id, expenseData); toast.success("Expense updated"); }
+      else { await addExpense(expenseData); toast.success("Expense recorded"); }
       setExpenseDialog(false); setExpenseForm(emptyExpenseForm()); setEditingExpense(null);
     } catch (error: any) { toast.error(error?.message || "Failed to save expense"); }
   };
@@ -774,6 +792,12 @@ export default function SalesExpenses() {
                 <SelectContent>{expenseCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {expenseForm.category === 'Other' && (
+              <div className="space-y-1">
+                <Label>Custom Category</Label>
+                <Input value={expenseForm.otherCategory} onChange={e => setExpenseForm(f => ({ ...f, otherCategory: e.target.value }))} placeholder="Type category name" />
+              </div>
+            )}
             <div className="col-span-2 space-y-1">
               <Label>Voucher Reference <span className="text-muted-foreground text-xs font-normal">(optional — auto-assigned if left blank)</span></Label>
               <Input value={expenseForm.voucherRef} onChange={e => setExpenseForm(f => ({ ...f, voucherRef: e.target.value }))} placeholder="e.g. EXP-2024-001" />

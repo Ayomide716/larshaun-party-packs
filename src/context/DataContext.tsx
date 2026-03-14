@@ -427,6 +427,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deleteSale = async (id: string) => {
+        // Fetch the sale details first to know what to revert
+        const { data: saleData, error: saleError } = await supabase
+            .from('sales')
+            .select('*, items:sale_items(*)')
+            .eq('id', id)
+            .single();
+        
+        if (saleError) throw saleError;
+
+        // If sale was completed, revert side effects
+        if (saleData.status === 'completed') {
+            // Restore stock for each item
+            for (const item of saleData.items) {
+                await updateProductStock(item.product_id, -item.qty); // Negative quantity to restore stock
+            }
+            
+            // Revert customer stats
+            const { data: customer } = await supabase.from('customers').select('total_purchases, total_spent').eq('id', saleData.customer_id).single();
+            if (customer) {
+                const newStats = {
+                    total_purchases: Math.max(0, customer.total_purchases - 1),
+                    total_spent: Math.max(0, customer.total_spent - saleData.total),
+                };
+                await supabase.from('customers').update(newStats).eq('id', saleData.customer_id);
+
+                // Update local customer state
+                setCustomers(prev => prev.map(c => c.id === saleData.customer_id ? {
+                    ...c,
+                    totalPurchases: newStats.total_purchases,
+                    totalSpent: newStats.total_spent
+                } : c));
+            }
+        }
+
         // Delete sale items first, then the sale
         await supabase.from('sale_items').delete().eq('sale_id', id);
         const { error } = await supabase.from('sales').delete().eq('id', id);

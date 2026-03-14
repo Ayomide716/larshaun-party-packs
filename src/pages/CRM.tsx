@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "@/context/DataContext";
 import type { Customer } from "../data/mockData";
 import { useSettings } from "@/context/SettingsContext";
-import { Plus, Search, Mail, Phone, MapPin, Edit2, X, Users, ChevronLeft, Trash2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Edit2, X, Users, ChevronLeft, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,11 +59,13 @@ export default function CRM() {
   };
 
   const save = async () => {
+    setIsSaving(true);
     try {
       if (editingCustomer) { await updateCustomer(editingCustomer.id, form); toast.success("Customer updated"); }
       else { await addCustomer(form); toast.success("Customer added"); }
       setDialogOpen(false);
     } catch { toast.error("Failed to save customer"); }
+    finally { setIsSaving(false); }
   };
 
   const handleDelete = (id: string) => {
@@ -210,7 +212,9 @@ export default function CRM() {
         <div className="flex flex-wrap gap-2">
           <ImportButton onImport={handleImportCSV} label="Import Customers" />
           <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
-          <Button onClick={openAdd} className="bg-primary text-primary-foreground" size="sm"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
+          <Button onClick={openAdd} className="bg-primary text-primary-foreground" size="sm" disabled={isSaving}>
+            <Plus className="w-4 h-4 mr-2" />Add Customer
+          </Button>
         </div>
       </div>
 
@@ -301,7 +305,10 @@ export default function CRM() {
           </div>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={save} className="bg-primary text-primary-foreground">{editingCustomer ? 'Save Changes' : 'Add Customer'}</Button>
+            <Button onClick={save} className="bg-primary text-primary-foreground" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingCustomer ? 'Save Changes' : 'Add Customer'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
