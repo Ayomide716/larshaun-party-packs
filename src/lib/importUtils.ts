@@ -9,11 +9,13 @@ export const parseCSV = <T>(
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        transformHeader: (header) => header.trim(),
         complete: (results) => {
             // Basic validation if expectedHeaders are provided
             if (expectedHeaders && results.meta.fields) {
+                const resultsHeaders = results.meta.fields.map(h => h.trim().toLowerCase());
                 const missingHeaders = expectedHeaders.filter(
-                    (h) => !results.meta.fields?.includes(h)
+                    (h) => !resultsHeaders.includes(h.trim().toLowerCase())
                 );
 
                 if (missingHeaders.length > 0) {

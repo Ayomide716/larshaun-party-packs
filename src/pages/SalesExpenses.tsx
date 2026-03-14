@@ -250,8 +250,14 @@ export default function SalesExpenses() {
       const localProducts = [...products];
 
       for (const row of importedData) {
-        const custName = row.customerName || row.customer;
-        const prodName = row.productName || row.product;
+        // Find keys in a case-insensitive way
+        const getVal = (keys: string[]) => {
+          const foundKey = Object.keys(row).find(k => keys.includes(k.toLowerCase().trim()));
+          return foundKey ? row[foundKey] : undefined;
+        };
+
+        const custName = getVal(['customername', 'customer', 'client']);
+        const prodName = getVal(['productname', 'product', 'item']);
         if (!custName || !prodName) continue;
 
         // 1. Find or create customer
@@ -259,10 +265,10 @@ export default function SalesExpenses() {
         if (!customer) {
           customer = await addCustomer({
             name: custName,
-            email: row.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-            phone: row.phone || '',
-            address: row.address || '',
-            joinDate: row.date || new Date().toISOString().split('T')[0],
+            email: getVal(['email']) || `${custName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+            phone: getVal(['phone', 'telephone', 'mobile']) || '',
+            address: getVal(['address', 'location']) || '',
+            joinDate: getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0],
             totalPurchases: 0,
             totalSpent: 0,
             lastPurchase: '',
@@ -277,12 +283,12 @@ export default function SalesExpenses() {
         if (!product) {
           product = await addProduct({
             name: prodName,
-            price: parseFloat(row.price) || 0,
-            category: row.category || 'Uncategorized',
-            cost: parseFloat(row.cost) || 0,
+            price: parseFloat(getVal(['price', 'unitprice'])) || 0,
+            category: getVal(['category']) || 'Uncategorized',
+            cost: parseFloat(getVal(['cost'])) || 0,
             stock: 100,
             minStock: 5,
-            sku: row.sku || `IMP-${Date.now()}-${importedCount}`,
+            sku: getVal(['sku', 'code']) || `IMP-${Date.now()}-${importedCount}`,
             description: 'Imported product',
             imageEmoji: '📦'
           });
@@ -290,10 +296,10 @@ export default function SalesExpenses() {
         }
 
         // 3. Create sale
-        const qty = parseInt(row.qty) || 1;
-        const price = parseFloat(row.price) || product.price;
-        const total = parseFloat(row.total) || (price * qty * (1 + settings.taxRate / 100));
-        const date = row.date || new Date().toISOString().split('T')[0];
+        const qty = parseInt(getVal(['qty', 'quantity'])) || 1;
+        const price = parseFloat(getVal(['price', 'unitprice'])) || product.price;
+        const total = parseFloat(getVal(['total', 'amount'])) || (price * qty * (1 + settings.taxRate / 100));
+        const date = getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0];
 
         await addSale({
           date,
@@ -301,17 +307,16 @@ export default function SalesExpenses() {
           customerName: customer.name,
           products: [{ productId: product.id, productName: product.name, qty, price }],
           total,
-          status: (row.status as Sale['status']) || 'completed',
-          paymentMethod: row.paymentMethod || 'Cash',
-          invoiceRef: row.invoiceRef || undefined
+          status: (getVal(['status']) as Sale['status']) || 'completed',
+          paymentMethod: getVal(['paymentmethod', 'payment']) || 'Cash',
+          invoiceRef: getVal(['invoiceref', 'invoice']) || undefined
         });
 
         // 4. Update stats if completed
-        if ((row.status || 'completed') === 'completed') {
+        if ((getVal(['status']) || 'completed') === 'completed') {
           await updateProductStock(product.id, qty);
           await updateCustomerStats(customer.id, total, date);
           
-          // Update local product stock to prevent over-deduction if same product appears again
           const pIdx = localProducts.findIndex(p => p.id === product.id);
           if (pIdx !== -1) localProducts[pIdx] = { ...localProducts[pIdx], stock: localProducts[pIdx].stock - qty };
         }
