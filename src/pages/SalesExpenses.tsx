@@ -252,18 +252,20 @@ export default function SalesExpenses() {
 
       for (const row of importedData) {
         // Find keys in a case-insensitive way, ignoring potential duplicate suffixes like _1, _2
+        const rowKeys = Object.keys(row);
         const getVal = (keys: string[]) => {
-          const foundKey = Object.keys(row).find(k => {
-            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '');
+          const foundKey = rowKeys.find(k => {
+            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[\s_]+/g, '');
             return keys.includes(normalized);
           });
           return foundKey ? row[foundKey] : undefined;
         };
 
-        const custName = getVal(['customername', 'customer', 'client']);
-        const prodName = getVal(['productname', 'product', 'item']);
+        const custName = getVal(['customername', 'customer', 'client', 'name', 'buyer']);
+        const prodName = getVal(['productname', 'product', 'item', 'description', 'particulars']);
         
         if (!custName || !prodName) {
+          console.log("Skipping row due to missing names:", { row, rowKeys, custName, prodName });
           skippedCount++;
           continue;
         }
