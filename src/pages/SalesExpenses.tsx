@@ -244,147 +244,165 @@ export default function SalesExpenses() {
 
   const handleImportSales = async (importedData: any[]) => {
     setIsSaving(true);
+    let importedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+    
     try {
-      let importedCount = 0;
-      let skippedCount = 0;
       const localCustomers = [...customers];
       const localProducts = [...products];
-      
-      // Dynamic column mapping to handle cases where the header row is parsed as data
       let columnMap: Record<string, string> = {};
 
       for (const row of importedData) {
-        const rowKeys = Object.keys(row);
-        
-        // Helper to find a value by key alias
-        const getVal = (keys: string[]) => {
-          // 1. Try mapped keys first
-          for (const key of keys) {
-            if (columnMap[key] && row[columnMap[key]]) return row[columnMap[key]];
-          }
-          // 2. Fallback to searching physical keys
-          const foundKey = rowKeys.find(k => {
-            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-9]/g, '');
-            return keys.some(target => target.replace(/[^a-z0-9]/g, '') === normalized);
-          });
-          return foundKey ? row[foundKey] : undefined;
-        };
+        try {
+          const rowKeys = Object.keys(row);
+          const getVal = (keys: string[]) => {
+            for (const key of keys) {
+              if (columnMap[key] && row[columnMap[key]] !== undefined) return row[columnMap[key]];
+            }
+            const foundKey = rowKeys.find(k => {
+              const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-0]/g, '');
+              return keys.some(target => target.replace(/[^a-z0-0]/g, '') === normalized);
+            });
+            return foundKey ? row[foundKey] : undefined;
+          };
 
-        // Header Detection: If this row's values look like headers, update the map
-        const findKeyByValueAlias = (aliases: string[]) => {
-          const entry = Object.entries(row).find(([_, val]) => {
-            const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-            return aliases.some(alias => alias.replace(/[^a-z0-9]/g, '') === normalizedVal);
-          });
-          return entry ? entry[0] : null;
-        };
+          const findKeyByValueAlias = (aliases: string[]) => {
+            const entry = Object.entries(row).find(([_, val]) => {
+              const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-0]/g, '');
+              return aliases.some(alias => alias.replace(/[^a-z0-0]/g, '') === normalizedVal);
+            });
+            return entry ? entry[0] : null;
+          };
 
-        const custHeaderKey = findKeyByValueAlias(['customername', 'customer', 'client', 'name', 'buyer']);
-        const prodHeaderKey = findKeyByValueAlias(['productname', 'product', 'item', 'description', 'particulars', 'items']);
-        
-        // If we found both customer and product headers in the VALUES, this is a header row
-        if (custHeaderKey && prodHeaderKey) {
-          columnMap['customerName'] = custHeaderKey;
-          columnMap['productName'] = prodHeaderKey;
-          columnMap['date'] = findKeyByValueAlias(['date', 'saledate', 'time', 'day', 'soldon']) || '';
-          columnMap['qty'] = findKeyByValueAlias(['qty', 'quantity', 'count', 'units']) || '';
-          columnMap['price'] = findKeyByValueAlias(['price', 'unitprice', 'rate', 'costprice']) || '';
-          columnMap['total'] = findKeyByValueAlias(['total', 'amount', 'netamount', 'totalprice']) || '';
-          columnMap['paymentMethod'] = findKeyByValueAlias(['paymentmethod', 'payment', 'method', 'payvia']) || '';
-          columnMap['status'] = findKeyByValueAlias(['status', 'state', 'condition']) || '';
-          columnMap['invoiceRef'] = findKeyByValueAlias(['invoiceref', 'invoice', 'ref', 'orderid']) || '';
-          continue; // Skip the header row itself
-        }
-
-        const custName = getVal(['customerName', 'customer', 'client', 'name', 'buyer']);
-        const prodName = getVal(['productName', 'product', 'item', 'description', 'particulars', 'items']);
-        
-        if (!custName || !prodName || String(custName).toLowerCase().includes('customer')) {
-          skippedCount++;
-          continue;
-        }
-
-        // 1. Find or create customer
-        const finalCustName = String(custName).trim();
-        let customer = localCustomers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
-        if (!customer) {
-          customer = await addCustomer({
-            name: finalCustName,
-            email: getVal(['email']) || `${finalCustName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`,
-            phone: getVal(['phone', 'telephone', 'mobile']) || '',
-            address: getVal(['address', 'location']) || '',
-            joinDate: getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0],
-            totalPurchases: 0,
-            totalSpent: 0,
-            lastPurchase: '',
-            segment: 'New',
-            notes: 'Imported from sales'
-          });
-          localCustomers.push(customer);
-        }
-
-        // 2. Find or create product
-        const finalProdName = String(prodName).trim();
-        let product = localProducts.find(p => p.name.toLowerCase() === finalProdName.toLowerCase());
-        if (!product) {
-          product = await addProduct({
-            name: finalProdName,
-            price: parseFloat(getVal(['price', 'unitprice'])) || 0,
-            category: getVal(['category']) || 'Uncategorized',
-            cost: parseFloat(getVal(['cost'])) || 0,
-            stock: 100,
-            minStock: 5,
-            sku: getVal(['sku', 'code']) || `IMP-${Date.now()}-${importedCount}`,
-            description: 'Imported product',
-            imageEmoji: '📦'
-          });
-          localProducts.push(product);
-        }
-
-        // 3. Create sale
-        const qty = parseInt(getVal(['qty', 'quantity'])) || 1;
-        const price = parseFloat(getVal(['price', 'unitprice'])) || product.price;
-        const total = parseFloat(getVal(['total', 'amount'])) || (price * qty * (1 + settings.taxRate / 100));
-        const dateRaw = getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0];
-        
-        // Handle variations in date format (e.g., DD/MM/YYYY to YYYY-MM-DD)
-        let date = dateRaw;
-        if (dateRaw.includes('/')) {
-          const parts = dateRaw.split('/');
-          if (parts[2]?.length === 4) date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-
-        await addSale({
-          date,
-          customerId: customer.id,
-          customerName: customer.name,
-          products: [{ productId: product.id, productName: product.name, qty, price }],
-          total,
-          status: (getVal(['status']) as Sale['status']) || 'completed',
-          paymentMethod: getVal(['paymentMethod', 'payment', 'method']) || 'Cash',
-          invoiceRef: getVal(['invoiceRef', 'invoice', 'orderid']) || undefined
-        });
-
-        // 4. Update stats if completed
-        if ((getVal(['status']) || 'completed') === 'completed') {
-          await updateProductStock(product.id, qty);
-          await updateCustomerStats(customer.id, total, date);
+          const custHeaderKey = findKeyByValueAlias(['customername', 'customer', 'client', 'name', 'buyer']);
+          const prodHeaderKey = findKeyByValueAlias(['productname', 'product', 'item', 'description', 'particulars', 'items']);
           
-          const pIdx = localProducts.findIndex(p => p.id === product.id);
-          if (pIdx !== -1) localProducts[pIdx] = { ...localProducts[pIdx], stock: localProducts[pIdx].stock - qty };
-        }
+          if (custHeaderKey && prodHeaderKey) {
+            columnMap['customerName'] = custHeaderKey;
+            columnMap['productName'] = prodHeaderKey;
+            columnMap['date'] = findKeyByValueAlias(['date', 'saledate', 'time', 'day', 'soldon']) || '';
+            columnMap['qty'] = findKeyByValueAlias(['qty', 'quantity', 'count', 'units']) || '';
+            columnMap['price'] = findKeyByValueAlias(['price', 'unitprice', 'rate', 'costprice']) || '';
+            columnMap['total'] = findKeyByValueAlias(['total', 'amount', 'netamount', 'totalprice']) || '';
+            columnMap['paymentMethod'] = findKeyByValueAlias(['paymentmethod', 'payment', 'method', 'payvia']) || '';
+            columnMap['status'] = findKeyByValueAlias(['status', 'state', 'condition']) || '';
+            columnMap['invoiceRef'] = findKeyByValueAlias(['invoiceref', 'invoice', 'ref', 'orderid', 'orderid']) || '';
+            continue;
+          }
 
-        importedCount++;
+          const custNameRaw = getVal(['customerName', 'customer', 'client', 'name', 'buyer']);
+          const prodNameRaw = getVal(['productName', 'product', 'item', 'description', 'particulars', 'items']);
+          
+          if (!custNameRaw || !prodNameRaw || String(custNameRaw).toLowerCase().trim() === 'customer') {
+            skippedCount++;
+            continue;
+          }
+
+          const custName = String(custNameRaw).trim();
+          const prodName = String(prodNameRaw).trim();
+
+          // 1. Find or create customer
+          let customer = localCustomers.find(c => c.name.toLowerCase().trim() === custName.toLowerCase());
+          if (!customer) {
+            customer = await addCustomer({
+              name: custName,
+              email: getVal(['email']) || `${custName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`,
+              phone: getVal(['phone', 'telephone', 'mobile']) || '',
+              address: getVal(['address', 'location']) || '',
+              joinDate: new Date().toISOString().split('T')[0],
+              totalPurchases: 0,
+              totalSpent: 0,
+              lastPurchase: '',
+              segment: 'New',
+              notes: 'Imported'
+            });
+            localCustomers.push(customer);
+          }
+
+          // 2. Find or create product
+          let product = localProducts.find(p => p.name.toLowerCase().trim() === prodName.toLowerCase());
+          if (!product) {
+            product = await addProduct({
+              name: prodName,
+              price: parseFloat(getVal(['price', 'unitprice'])) || 0,
+              category: getVal(['category']) || 'Uncategorized',
+              cost: parseFloat(getVal(['cost'])) || 0,
+              stock: 100,
+              minStock: 5,
+              sku: getVal(['sku', 'code']) || `IMP-${Date.now()}-${importedCount}`,
+              description: 'Imported',
+              imageEmoji: '📦'
+            });
+            localProducts.push(product);
+          }
+
+          // 3. Create sale
+          const qty = parseInt(getVal(['qty', 'quantity'])) || 1;
+          const price = parseFloat(getVal(['price', 'unitprice'])) || product.price;
+          const total = parseFloat(getVal(['total', 'amount'])) || (price * qty * (1 + settings.taxRate / 100));
+          const dateRaw = String(getVal(['date', 'saledate']) || '').trim();
+          
+          let date = new Date().toISOString().split('T')[0];
+          if (dateRaw) {
+            // Intelligent date parser
+            const parts = dateRaw.split(/[\/\-.]/);
+            if (parts.length === 3) {
+              const p0 = parseInt(parts[0]);
+              const p1 = parseInt(parts[1]);
+              const p2 = parts[2].length === 4 ? parseInt(parts[2]) : (parseInt(parts[2]) + 2000);
+              
+              // Guess MM/DD/YYYY vs DD/MM/YYYY
+              if (p0 > 12) { // Must be DD/MM/YYYY
+                date = `${p2}-${String(p1).padStart(2, '0')}-${String(p0).padStart(2, '0')}`;
+              } else if (p1 > 12) { // Must be MM/DD/YYYY
+                date = `${p2}-${String(p0).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
+              } else {
+                // Ambiguous, assume MM/DD/YYYY for your current data format (01/20/2026)
+                // But check if it's already YYYY-MM-DD
+                if (parts[0].length === 4) {
+                   date = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                } else {
+                   date = `${p2}-${String(p0).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
+                }
+              }
+            } else if (!isNaN(Date.parse(dateRaw))) {
+              date = new Date(dateRaw).toISOString().split('T')[0];
+            }
+          }
+
+          await addSale({
+            date,
+            customerId: customer.id,
+            customerName: customer.name,
+            products: [{ productId: product.id, productName: product.name, qty, price }],
+            total,
+            status: (getVal(['status']) as Sale['status']) || 'completed',
+            paymentMethod: getVal(['paymentMethod', 'payment', 'method']) || 'Cash',
+            invoiceRef: getVal(['invoiceRef', 'invoice', 'orderid']) || undefined
+          });
+
+          if ((getVal(['status']) || 'completed') === 'completed') {
+            await updateProductStock(product.id, qty);
+            await updateCustomerStats(customer.id, total, date);
+            const pIdx = localProducts.findIndex(p => p.id === product.id);
+            if (pIdx !== -1) localProducts[pIdx] = { ...localProducts[pIdx], stock: localProducts[pIdx].stock - qty };
+          }
+          importedCount++;
+        } catch (innerError: any) {
+          console.error("Error processing row:", row, innerError);
+          errorCount++;
+        }
       }
       
-      if (skippedCount > 0) {
-        toast.info(`Import complete: ${importedCount} added, ${skippedCount} skipped rows.`);
+      if (errorCount > 0 || skippedCount > 0) {
+        toast.info(`Import complete: ${importedCount} added, ${skippedCount} skipped, ${errorCount} errors.`);
       } else {
         toast.success(`Successfully imported ${importedCount} sales`);
       }
     } catch (error: any) {
       console.error("Import error:", error);
-      toast.error("Import failed partially: " + error.message);
+      toast.error("Critical import error: " + error.message);
     } finally {
       setIsSaving(false);
     }
