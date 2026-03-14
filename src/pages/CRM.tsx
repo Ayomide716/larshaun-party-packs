@@ -38,6 +38,7 @@ export default function CRM() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Omit<Customer, 'id'>>(emptyCustomer);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [customerIdToDelete, setCustomerIdToDelete] = useState<string | null>(null);
@@ -89,30 +90,99 @@ export default function CRM() {
     exportToPDF(['Name', 'Email', 'Phone', 'Segment', 'Total Spent', 'Orders'], customers.map(c => [c.name, c.email, c.phone, c.segment, `${settings.currency} ${c.totalSpent.toFixed(2)}`, c.totalPurchases.toString()]), 'Customer List', `customers_${new Date().toISOString().split('T')[0]}`);
   };
   const handleImportCSV = async (importedData: any[]) => {
+    setIsSaving(true);
     try {
+      let addedCount = 0;
+      let skippedCount = 0;
       const localCustomers = [...customers];
-      for (const c of importedData) {
-        if (c.name && c.email) {
-          const existing = localCustomers.find(lc => lc.name.toLowerCase() === c.name.toLowerCase() || lc.email.toLowerCase() === c.email.toLowerCase());
-          if (existing) continue;
+      let columnMap: Record<string, string> = {};
 
-          const newCustomer = await addCustomer({ 
-            name: c.name, 
-            email: c.email, 
-            phone: c.phone || '', 
-            address: c.address || '', 
-            joinDate: c.joinDate || new Date().toISOString().split('T')[0], 
-            totalPurchases: parseInt(c.totalPurchases) || 0, 
-            totalSpent: parseFloat(c.totalSpent) || 0, 
-            lastPurchase: c.lastPurchase || '', 
-            segment: (c.segment as Customer['segment']) || 'New', 
-            notes: c.notes || '' 
+      for (const row of importedData) {
+        const rowKeys = Object.keys(row);
+        
+        const getVal = (keys: string[]) => {
+          for (const key of keys) {
+            if (columnMap[key] && row[columnMap[key]] !== undefined) return row[columnMap[key]];
+          }
+          const foundKey = rowKeys.find(k => {
+            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-9]/g, '');
+            return keys.some(target => target.replace(/[^a-z0-9]/g, '') === normalized);
           });
-          localCustomers.push(newCustomer);
+          return foundKey ? row[foundKey] : undefined;
+        };
+
+        const findKeyByValueAlias = (aliases: string[]) => {
+          const entry = Object.entries(row).find(([_, val]) => {
+            const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            return aliases.some(alias => alias.replace(/[^a-z0-9]/g, '') === normalizedVal);
+          });
+          return entry ? entry[0] : null;
+        };
+
+        const nameHeader = findKeyByValueAlias(['name', 'customername', 'clientname', 'full name', 'buyer']);
+        const emailHeader = findKeyByValueAlias(['email', 'emailaddress', 'contactemail']);
+
+        if (nameHeader && emailHeader) {
+          columnMap['name'] = nameHeader;
+          columnMap['email'] = emailHeader;
+          columnMap['phone'] = findKeyByValueAlias(['phone', 'mobile', 'telephone', 'phonenumber']) || '';
+          columnMap['address'] = findKeyByValueAlias(['address', 'location', 'residence']) || '';
+          columnMap['joinDate'] = findKeyByValueAlias(['joindate', 'date', 'registeredon', 'createdat']) || '';
+          columnMap['segment'] = findKeyByValueAlias(['segment', 'type', 'category', 'status']) || '';
+          columnMap['notes'] = findKeyByValueAlias(['notes', 'comments', 'remark', 'description']) || '';
+          continue;
         }
+
+        const name = String(getVal(['name', 'customername', 'clientname', 'buyer']) || '').trim();
+        const email = String(getVal(['email', 'emailaddress']) || '').trim();
+
+        if (!name || (email && !email.includes('@')) || name.toLowerCase() === 'name') {
+          skippedCount++;
+          continue;
+        }
+
+        const existing = localCustomers.find(lc => 
+          lc.name.toLowerCase() === name.toLowerCase() || 
+          (email && lc.email.toLowerCase() === email.toLowerCase())
+        );
+        
+        if (existing) {
+          skippedCount++;
+          continue;
+        }
+
+        const dateRaw = String(getVal(['joinDate', 'date']) || '').trim();
+        let joinDate = new Date().toISOString().split('T')[0];
+        if (dateRaw) {
+          const parts = dateRaw.split(/[\/\-.]/);
+          if (parts.length === 3) {
+            const p2 = parts[2].length === 4 ? parts[2] : (parseInt(parts[2]) + 2000).toString();
+            joinDate = `${p2}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+        }
+
+        const newCustomer = await addCustomer({ 
+          name, 
+          email: email || `${name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`, 
+          phone: String(getVal(['phone', 'mobile']) || '').trim(), 
+          address: String(getVal(['address', 'location']) || '').trim(), 
+          joinDate, 
+          totalPurchases: 0, 
+          totalSpent: 0, 
+          lastPurchase: '', 
+          segment: (getVal(['segment']) as Customer['segment']) || 'New', 
+          notes: String(getVal(['notes']) || '').trim() 
+        });
+        localCustomers.push(newCustomer);
+        addedCount++;
       }
-      toast.success("Import completed");
-    } catch { toast.error("Import failed partially"); }
+      toast.success(`Import complete: ${addedCount} customers added, ${skippedCount} skipped.`);
+    } catch (error: any) { 
+      console.error("CRM Import error:", error);
+      toast.error("Import failed: " + error.message); 
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const segmentCounts = { VIP: customers.filter(c => c.segment === 'VIP').length, Regular: customers.filter(c => c.segment === 'Regular').length, New: customers.filter(c => c.segment === 'New').length, "At Risk": customers.filter(c => c.segment === 'At Risk').length };
@@ -138,7 +208,7 @@ export default function CRM() {
           <p className="text-muted-foreground mt-1 text-sm">{customers.length} customers · {settings.currencySymbol}{customers.reduce((s, c) => s + c.totalSpent, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} lifetime value</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ImportButton onImport={handleImportCSV} expectedHeaders={['name', 'email', 'phone']} />
+          <ImportButton onImport={handleImportCSV} label="Import Customers" />
           <ExportButton onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
           <Button onClick={openAdd} className="bg-primary text-primary-foreground" size="sm"><Plus className="w-4 h-4 mr-2" />Add Customer</Button>
         </div>

@@ -269,8 +269,8 @@ export default function SalesExpenses() {
 
           const findKeyByValueAlias = (aliases: string[]) => {
             const entry = Object.entries(row).find(([_, val]) => {
-              const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-0]/g, '');
-              return aliases.some(alias => alias.replace(/[^a-z0-0]/g, '') === normalizedVal);
+              const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              return aliases.some(alias => alias.replace(/[^a-z0-9]/g, '') === normalizedVal);
             });
             return entry ? entry[0] : null;
           };
