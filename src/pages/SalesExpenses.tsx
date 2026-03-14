@@ -246,6 +246,7 @@ export default function SalesExpenses() {
     setIsSaving(true);
     try {
       let importedCount = 0;
+      let skippedCount = 0;
       const localCustomers = [...customers];
       const localProducts = [...products];
 
@@ -261,7 +262,11 @@ export default function SalesExpenses() {
 
         const custName = getVal(['customername', 'customer', 'client']);
         const prodName = getVal(['productname', 'product', 'item']);
-        if (!custName || !prodName) continue;
+        
+        if (!custName || !prodName) {
+          skippedCount++;
+          continue;
+        }
 
         // 1. Find or create customer
         let customer = localCustomers.find(c => c.name.toLowerCase() === custName.toLowerCase());
@@ -326,7 +331,12 @@ export default function SalesExpenses() {
 
         importedCount++;
       }
-      toast.success(`Successfully imported ${importedCount} sales`);
+      
+      if (skippedCount > 0) {
+        toast.info(`Import complete: ${importedCount} added, ${skippedCount} skipped due to missing names.`);
+      } else {
+        toast.success(`Successfully imported ${importedCount} sales`);
+      }
     } catch (error: any) {
       console.error("Import error:", error);
       toast.error("Import failed partially: " + error.message);
@@ -446,7 +456,7 @@ export default function SalesExpenses() {
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <ImportButton onImport={handleImportSales} label="Import Sales" expectedHeaders={['customerName', 'date', 'productName', 'qty', 'price', 'paymentMethod']} />
+              <ImportButton onImport={handleImportSales} label="Import Sales" />
               <ExportButton label="Export Sales" onExportCSV={handleExportSalesCSV} onExportPDF={handleExportSalesPDF} />
             </div>
           </div>
