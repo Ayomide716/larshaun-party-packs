@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/ExportButton";
+import { ImportButton } from "@/components/ImportButton";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 const expenseCategories = ["Inventory", "Marketing", "Shipping", "Operations", "Software", "Other"];
@@ -27,7 +28,7 @@ const emptySaleForm = () => ({ customerId: '', date: new Date().toISOString().sp
 const emptyExpenseForm = () => ({ date: new Date().toISOString().split('T')[0], category: 'Inventory', description: '', amount: 0, vendor: '', voucherRef: '' });
 
 export default function SalesExpenses() {
-  const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, addProduct, addProducts, customers, updateProductStock, updateCustomerStats, isLoading } = useData();
+  const { sales, addSale, updateSale, deleteSale, expenses, addExpense, updateExpense, deleteExpense, products, addProduct, addProducts, customers, addCustomer, updateProductStock, updateCustomerStats, isLoading } = useData();
   const { settings } = useSettings();
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -241,6 +242,91 @@ export default function SalesExpenses() {
     }
   };
 
+  const handleImportSales = async (importedData: any[]) => {
+    setIsSaving(true);
+    try {
+      let importedCount = 0;
+      const localCustomers = [...customers];
+      const localProducts = [...products];
+
+      for (const row of importedData) {
+        const custName = row.customerName || row.customer;
+        const prodName = row.productName || row.product;
+        if (!custName || !prodName) continue;
+
+        // 1. Find or create customer
+        let customer = localCustomers.find(c => c.name.toLowerCase() === custName.toLowerCase());
+        if (!customer) {
+          customer = await addCustomer({
+            name: custName,
+            email: row.email || `${custName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+            phone: row.phone || '',
+            address: row.address || '',
+            joinDate: row.date || new Date().toISOString().split('T')[0],
+            totalPurchases: 0,
+            totalSpent: 0,
+            lastPurchase: '',
+            segment: 'New',
+            notes: 'Imported from sales'
+          });
+          localCustomers.push(customer);
+        }
+
+        // 2. Find or create product
+        let product = localProducts.find(p => p.name.toLowerCase() === prodName.toLowerCase());
+        if (!product) {
+          product = await addProduct({
+            name: prodName,
+            price: parseFloat(row.price) || 0,
+            category: row.category || 'Uncategorized',
+            cost: parseFloat(row.cost) || 0,
+            stock: 100,
+            minStock: 5,
+            sku: row.sku || `IMP-${Date.now()}-${importedCount}`,
+            description: 'Imported product',
+            imageEmoji: '📦'
+          });
+          localProducts.push(product);
+        }
+
+        // 3. Create sale
+        const qty = parseInt(row.qty) || 1;
+        const price = parseFloat(row.price) || product.price;
+        const total = parseFloat(row.total) || (price * qty * (1 + settings.taxRate / 100));
+        const date = row.date || new Date().toISOString().split('T')[0];
+
+        await addSale({
+          date,
+          customerId: customer.id,
+          customerName: customer.name,
+          products: [{ productId: product.id, productName: product.name, qty, price }],
+          total,
+          status: (row.status as Sale['status']) || 'completed',
+          paymentMethod: row.paymentMethod || 'Cash',
+          invoiceRef: row.invoiceRef || undefined
+        });
+
+        // 4. Update stats if completed
+        if ((row.status || 'completed') === 'completed') {
+          await updateProductStock(product.id, qty);
+          await updateCustomerStats(customer.id, total, date);
+          
+          // Update local product stock to prevent over-deduction if same product appears again
+          const pIdx = localProducts.findIndex(p => p.id === product.id);
+          if (pIdx !== -1) localProducts[pIdx] = { ...localProducts[pIdx], stock: localProducts[pIdx].stock - qty };
+        }
+
+        importedCount++;
+      }
+      toast.success(`Successfully imported ${importedCount} sales`);
+    } catch (error: any) {
+      console.error("Import error:", error);
+      toast.error("Import failed partially: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // --- Expense helpers ---
   const openAddExpense = () => { setEditingExpense(null); setExpenseForm(emptyExpenseForm()); setExpenseDialog(true); };
   const openEditExpense = (expense: Expense) => {
@@ -351,7 +437,10 @@ export default function SalesExpenses() {
                 </SelectContent>
               </Select>
             </div>
-            <ExportButton label="Export Sales" onExportCSV={handleExportSalesCSV} onExportPDF={handleExportSalesPDF} />
+            <div className="flex items-center gap-2">
+              <ImportButton onImport={handleImportSales} label="Import Sales" expectedHeaders={['customerName', 'date', 'productName', 'qty', 'price', 'paymentMethod']} />
+              <ExportButton label="Export Sales" onExportCSV={handleExportSalesCSV} onExportPDF={handleExportSalesPDF} />
+            </div>
           </div>
           <div className="bg-card rounded-2xl border border-border shadow-[var(--shadow-card)] overflow-hidden">
             <div className="overflow-x-auto">

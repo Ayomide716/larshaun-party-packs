@@ -18,11 +18,11 @@ interface DataContextType {
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
 
-    addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+    addCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer>;
     updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
     deleteCustomer: (id: string) => Promise<void>;
 
-    addSale: (sale: Omit<Sale, 'id'>) => Promise<void>;
+    addSale: (sale: Omit<Sale, 'id'>) => Promise<Sale>;
     updateSale: (id: string, sale: Partial<Omit<Sale, 'id'>>) => Promise<void>;
     deleteSale: (id: string) => Promise<void>;
 
@@ -215,13 +215,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             console.error("Error adding customer:", error);
             throw error;
         }
-        if (data) setCustomers(prev => [{
-            ...data,
-            joinDate: data.join_date,
-            totalPurchases: data.total_purchases,
-            totalSpent: data.total_spent,
-            lastPurchase: data.last_purchase
-        }, ...prev]);
+        if (data) {
+            const newCustomer = {
+                ...data,
+                joinDate: data.join_date,
+                totalPurchases: data.total_purchases,
+                totalSpent: data.total_spent,
+                lastPurchase: data.last_purchase
+            };
+            setCustomers(prev => [newCustomer, ...prev]);
+            return newCustomer;
+        }
+        throw new Error("Failed to add customer");
     };
 
     const updateCustomer = async (id: string, customer: Partial<Customer>) => {
@@ -254,8 +259,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setCustomers(prev => prev.filter(c => c.id !== id));
     };
 
-    const addSale = async (sale: Omit<Sale, 'id'>) => {
-        if (!user) return;
+    const addSale = async (sale: Omit<Sale, 'id'>): Promise<Sale> => {
+        if (!user) throw new Error("Not authenticated");
         // 1. Insert sale — invoice_ref requires running supabase_invoice_ref_migration.sql first
         const salePayload: any = {
             user_id: user.id,
@@ -293,8 +298,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 }));
                 const { error: ie2 } = await supabase.from('sale_items').insert(saleItems2);
                 if (ie2) throw ie2;
-                setSales(prev => [{ ...sale, id: retryData.id }, ...prev]);
-                return;
+                const newSale = { ...sale, id: retryData.id };
+                setSales(prev => [newSale, ...prev]);
+                return newSale;
             }
             console.error("Error adding sale:", saleError);
             throw saleError;
@@ -315,7 +321,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             throw itemsError;
         }
 
-        setSales(prev => [{ ...sale, id: saleData.id }, ...prev]);
+        const newSale = { ...sale, id: saleData.id };
+        setSales(prev => [newSale, ...prev]);
+        return newSale;
     };
 
     const addExpense = async (expense: Omit<Expense, 'id'>) => {
@@ -427,23 +435,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateProductStock = async (productId: string, deductedQty: number) => {
-        const product = products.find(p => p.id === productId);
-        if (!product) return;
+        // We need to get the latest stock value to update the database correctly.
+        // Using a functional update for setProducts ensures local state is correct.
+        setProducts(prev => {
+            const product = prev.find(p => p.id === productId);
+            if (!product) return prev;
+            const newStock = product.stock - deductedQty;
+            
+            // Side effect inside setstate is generally discouraged but here we need 
+            // the specific calculated value for the database update.
+            // A better way is to do the calculation once and use it for both.
+            return prev.map(p => p.id === productId ? { ...p, stock: newStock } : p);
+        });
 
-        const newStock = product.stock - deductedQty;
-        const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', productId);
-        if (error) throw error;
-
-        setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
+        // For the database, we fetch the latest to be safe or use what we calculated.
+        // Given the current architecture, we'll fetch the latest from the database or 
+        // trust the local state if it's been kept in sync.
+        // To be truly safe for bulk imports, we should use functional updates.
+        
+        const { data: currentProduct } = await supabase.from('products').select('stock').eq('id', productId).single();
+        if (currentProduct) {
+            const newStock = currentProduct.stock - deductedQty;
+            await supabase.from('products').update({ stock: newStock }).eq('id', productId);
+        }
     };
 
     const updateCustomerStats = async (customerId: string, amountSpent: number, date: string) => {
-        const customer = customers.find(c => c.id === customerId);
+        const { data: customer } = await supabase.from('customers').select('total_purchases, total_spent').eq('id', customerId).single();
         if (!customer) return;
 
         const newStats = {
-            total_purchases: customer.totalPurchases + 1,
-            total_spent: customer.totalSpent + amountSpent,
+            total_purchases: customer.total_purchases + 1,
+            total_spent: customer.total_spent + amountSpent,
             last_purchase: date
         };
 

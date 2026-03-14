@@ -23,7 +23,6 @@ export const parseCSV = <T>(
             }
 
             onComplete(results.data as T[]);
-            toast.success(`Successfully imported ${results.data.length} records`);
         },
         error: (error) => {
             toast.error(`Error parsing CSV: ${error.message}`);

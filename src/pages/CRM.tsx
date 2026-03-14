@@ -90,9 +90,25 @@ export default function CRM() {
   };
   const handleImportCSV = async (importedData: any[]) => {
     try {
+      const localCustomers = [...customers];
       for (const c of importedData) {
         if (c.name && c.email) {
-          await addCustomer({ name: c.name, email: c.email, phone: c.phone || '', address: c.address || '', joinDate: c.joinDate || new Date().toISOString().split('T')[0], totalPurchases: parseInt(c.totalPurchases) || 0, totalSpent: parseFloat(c.totalSpent) || 0, lastPurchase: c.lastPurchase || '', segment: (c.segment as Customer['segment']) || 'New', notes: c.notes || '' });
+          const existing = localCustomers.find(lc => lc.name.toLowerCase() === c.name.toLowerCase() || lc.email.toLowerCase() === c.email.toLowerCase());
+          if (existing) continue;
+
+          const newCustomer = await addCustomer({ 
+            name: c.name, 
+            email: c.email, 
+            phone: c.phone || '', 
+            address: c.address || '', 
+            joinDate: c.joinDate || new Date().toISOString().split('T')[0], 
+            totalPurchases: parseInt(c.totalPurchases) || 0, 
+            totalSpent: parseFloat(c.totalSpent) || 0, 
+            lastPurchase: c.lastPurchase || '', 
+            segment: (c.segment as Customer['segment']) || 'New', 
+            notes: c.notes || '' 
+          });
+          localCustomers.push(newCustomer);
         }
       }
       toast.success("Import completed");
