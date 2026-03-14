@@ -249,33 +249,68 @@ export default function SalesExpenses() {
       let skippedCount = 0;
       const localCustomers = [...customers];
       const localProducts = [...products];
+      
+      // Dynamic column mapping to handle cases where the header row is parsed as data
+      let columnMap: Record<string, string> = {};
 
       for (const row of importedData) {
-        // Find keys in a case-insensitive way, ignoring potential duplicate suffixes like _1, _2
         const rowKeys = Object.keys(row);
+        
+        // Helper to find a value by key alias
         const getVal = (keys: string[]) => {
+          // 1. Try mapped keys first
+          for (const key of keys) {
+            if (columnMap[key] && row[columnMap[key]]) return row[columnMap[key]];
+          }
+          // 2. Fallback to searching physical keys
           const foundKey = rowKeys.find(k => {
-            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[\s_]+/g, '');
-            return keys.includes(normalized);
+            const normalized = k.toLowerCase().trim().replace(/_\d+$/, '').replace(/[^a-z0-9]/g, '');
+            return keys.some(target => target.replace(/[^a-z0-9]/g, '') === normalized);
           });
           return foundKey ? row[foundKey] : undefined;
         };
 
-        const custName = getVal(['customername', 'customer', 'client', 'name', 'buyer']);
-        const prodName = getVal(['productname', 'product', 'item', 'description', 'particulars']);
+        // Header Detection: If this row's values look like headers, update the map
+        const findKeyByValueAlias = (aliases: string[]) => {
+          const entry = Object.entries(row).find(([_, val]) => {
+            const normalizedVal = String(val).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            return aliases.some(alias => alias.replace(/[^a-z0-9]/g, '') === normalizedVal);
+          });
+          return entry ? entry[0] : null;
+        };
+
+        const custHeaderKey = findKeyByValueAlias(['customername', 'customer', 'client', 'name', 'buyer']);
+        const prodHeaderKey = findKeyByValueAlias(['productname', 'product', 'item', 'description', 'particulars', 'items']);
         
-        if (!custName || !prodName) {
-          console.log("Skipping row due to missing names:", { row, rowKeys, custName, prodName });
+        // If we found both customer and product headers in the VALUES, this is a header row
+        if (custHeaderKey && prodHeaderKey) {
+          columnMap['customerName'] = custHeaderKey;
+          columnMap['productName'] = prodHeaderKey;
+          columnMap['date'] = findKeyByValueAlias(['date', 'saledate', 'time', 'day', 'soldon']) || '';
+          columnMap['qty'] = findKeyByValueAlias(['qty', 'quantity', 'count', 'units']) || '';
+          columnMap['price'] = findKeyByValueAlias(['price', 'unitprice', 'rate', 'costprice']) || '';
+          columnMap['total'] = findKeyByValueAlias(['total', 'amount', 'netamount', 'totalprice']) || '';
+          columnMap['paymentMethod'] = findKeyByValueAlias(['paymentmethod', 'payment', 'method', 'payvia']) || '';
+          columnMap['status'] = findKeyByValueAlias(['status', 'state', 'condition']) || '';
+          columnMap['invoiceRef'] = findKeyByValueAlias(['invoiceref', 'invoice', 'ref', 'orderid']) || '';
+          continue; // Skip the header row itself
+        }
+
+        const custName = getVal(['customerName', 'customer', 'client', 'name', 'buyer']);
+        const prodName = getVal(['productName', 'product', 'item', 'description', 'particulars', 'items']);
+        
+        if (!custName || !prodName || String(custName).toLowerCase().includes('customer')) {
           skippedCount++;
           continue;
         }
 
         // 1. Find or create customer
-        let customer = localCustomers.find(c => c.name.toLowerCase() === custName.toLowerCase());
+        const finalCustName = String(custName).trim();
+        let customer = localCustomers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
         if (!customer) {
           customer = await addCustomer({
-            name: custName,
-            email: getVal(['email']) || `${custName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+            name: finalCustName,
+            email: getVal(['email']) || `${finalCustName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`,
             phone: getVal(['phone', 'telephone', 'mobile']) || '',
             address: getVal(['address', 'location']) || '',
             joinDate: getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0],
@@ -289,10 +324,11 @@ export default function SalesExpenses() {
         }
 
         // 2. Find or create product
-        let product = localProducts.find(p => p.name.toLowerCase() === prodName.toLowerCase());
+        const finalProdName = String(prodName).trim();
+        let product = localProducts.find(p => p.name.toLowerCase() === finalProdName.toLowerCase());
         if (!product) {
           product = await addProduct({
-            name: prodName,
+            name: finalProdName,
             price: parseFloat(getVal(['price', 'unitprice'])) || 0,
             category: getVal(['category']) || 'Uncategorized',
             cost: parseFloat(getVal(['cost'])) || 0,
@@ -309,7 +345,14 @@ export default function SalesExpenses() {
         const qty = parseInt(getVal(['qty', 'quantity'])) || 1;
         const price = parseFloat(getVal(['price', 'unitprice'])) || product.price;
         const total = parseFloat(getVal(['total', 'amount'])) || (price * qty * (1 + settings.taxRate / 100));
-        const date = getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0];
+        const dateRaw = getVal(['date', 'saledate']) || new Date().toISOString().split('T')[0];
+        
+        // Handle variations in date format (e.g., DD/MM/YYYY to YYYY-MM-DD)
+        let date = dateRaw;
+        if (dateRaw.includes('/')) {
+          const parts = dateRaw.split('/');
+          if (parts[2]?.length === 4) date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
 
         await addSale({
           date,
@@ -318,8 +361,8 @@ export default function SalesExpenses() {
           products: [{ productId: product.id, productName: product.name, qty, price }],
           total,
           status: (getVal(['status']) as Sale['status']) || 'completed',
-          paymentMethod: getVal(['paymentmethod', 'payment']) || 'Cash',
-          invoiceRef: getVal(['invoiceref', 'invoice']) || undefined
+          paymentMethod: getVal(['paymentMethod', 'payment', 'method']) || 'Cash',
+          invoiceRef: getVal(['invoiceRef', 'invoice', 'orderid']) || undefined
         });
 
         // 4. Update stats if completed
@@ -335,7 +378,7 @@ export default function SalesExpenses() {
       }
       
       if (skippedCount > 0) {
-        toast.info(`Import complete: ${importedCount} added, ${skippedCount} skipped due to missing names.`);
+        toast.info(`Import complete: ${importedCount} added, ${skippedCount} skipped rows.`);
       } else {
         toast.success(`Successfully imported ${importedCount} sales`);
       }
